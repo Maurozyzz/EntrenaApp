@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Cinzel:wght@700;900&display=swap');
+
+:root {
+  --oc-ink: #090d10;
+  --oc-slate: #1a232b;
+  --oc-surface: #12181d;
+  --oc-border: #232e35;
+  --oc-gold: #d9b75c;
+  --oc-energy: #b7ff37;
+  --oc-text: #f4f6f4;
+  --oc-text-muted: #93a0a3;
+  --oc-danger: #e5484d;
+  --oc-success: #4fae6a;
+
+  --oc-font-display: 'Cinzel', serif;
+  --oc-font-body: 'Montserrat', -apple-system, sans-serif;
+
+  --oc-radius: 12px;
+  --oc-radius-sm: 8px;
+  --oc-space-1: 4px;
+  --oc-space-2: 8px;
+  --oc-space-3: 12px;
+  --oc-space-4: 16px;
+  --oc-space-5: 24px;
+  --oc-space-6: 32px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--oc-ink);
+  color: var(--oc-text);
+  font-family: var(--oc-font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--oc-font-display);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin: 0 0 var(--oc-space-2);
+}
+
+p {
+  margin: 0 0 var(--oc-space-3);
+}
+
+a {
+  color: var(--oc-gold);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--oc-energy);
+  outline-offset: 2px;
+}

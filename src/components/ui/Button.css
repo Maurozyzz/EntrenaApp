@@ -1,0 +1,53 @@
+.oc-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--oc-space-2);
+  border-radius: var(--oc-radius-sm);
+  padding: 12px 20px;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.oc-button:active {
+  transform: translateY(1px);
+}
+
+.oc-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.oc-button--primary {
+  background: var(--oc-energy);
+  color: var(--oc-ink);
+}
+
+.oc-button--primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.oc-button--secondary {
+  background: transparent;
+  color: var(--oc-gold);
+  border-color: var(--oc-gold);
+}
+
+.oc-button--secondary:hover:not(:disabled) {
+  background: rgba(217, 183, 92, 0.1);
+}
+
+.oc-button--ghost {
+  background: transparent;
+  color: var(--oc-text-muted);
+  border-color: var(--oc-border);
+}
+
+.oc-button--ghost:hover:not(:disabled) {
+  color: var(--oc-text);
+  border-color: var(--oc-text-muted);
+}

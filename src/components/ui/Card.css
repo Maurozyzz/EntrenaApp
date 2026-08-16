@@ -1,0 +1,6 @@
+.oc-card {
+  background: var(--oc-surface);
+  border: 1px solid var(--oc-border);
+  border-radius: var(--oc-radius);
+  padding: var(--oc-space-5);
+}
