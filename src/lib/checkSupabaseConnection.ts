@@ -5,8 +5,10 @@ export type SupabaseConnectionStatus =
   | { ok: false; message: string };
 
 /**
- * Chequeo liviano de conectividad contra el endpoint REST raíz de Supabase.
+ * Chequeo liviano de conectividad contra el endpoint de salud de Auth (GoTrue).
  * No depende de que exista ninguna tabla todavía (útil antes de correr las migraciones).
+ * Nota: no usar `/rest/v1/` acá — en proyectos con el sistema de API keys nuevo
+ * (publishable/secret) ese endpoint raíz exige la secret key y da 401 con la publishable.
  */
 export async function checkSupabaseConnection(): Promise<SupabaseConnectionStatus> {
   if (!isSupabaseConfigured) {
@@ -17,13 +19,13 @@ export async function checkSupabaseConnection(): Promise<SupabaseConnectionStatu
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
   try {
-    const res = await fetch(`${url}/rest/v1/`, {
+    const res = await fetch(`${url}/auth/v1/health`, {
       headers: { apikey: anonKey },
     });
     if (res.status === 401) {
       return { ok: false, message: 'El proyecto respondió, pero la anon key parece incorrecta (401).' };
     }
-    if (!res.ok && res.status !== 404) {
+    if (!res.ok) {
       return { ok: false, message: `El proyecto respondió con un error inesperado (${res.status}).` };
     }
     return { ok: true, message: 'Conectado a Supabase correctamente.' };

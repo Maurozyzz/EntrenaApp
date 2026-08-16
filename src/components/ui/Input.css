@@ -1,0 +1,26 @@
+.oc-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--oc-space-1);
+  text-align: left;
+}
+
+.oc-field__label {
+  font-size: 13px;
+  color: var(--oc-text-muted);
+}
+
+.oc-input {
+  background: var(--oc-ink);
+  border: 1px solid var(--oc-border);
+  border-radius: var(--oc-radius-sm);
+  padding: 10px 12px;
+  color: var(--oc-text);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.oc-input:focus-visible {
+  outline: 2px solid var(--oc-energy);
+  outline-offset: 1px;
+}
