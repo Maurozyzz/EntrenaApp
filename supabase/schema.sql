@@ -127,7 +127,18 @@ create index if not exists nutrition_plans_trainer_id_idx on public.nutrition_pl
 create index if not exists payments_student_id_idx on public.payments (student_id);
 
 -- =========================================================================
--- 3. FUNCIONES HELPER (schema privado, no expuesto por la API)
+-- 3. GRANTS
+-- RLS restringe filas, pero primero hace falta el permiso a nivel de tabla
+-- para que el rol pueda intentar la operación. Sin esto, PostgREST devuelve
+-- 403 "permission denied" antes de siquiera evaluar las policies.
+-- =========================================================================
+
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant usage on all sequences in schema public to authenticated;
+
+-- =========================================================================
+-- 4. FUNCIONES HELPER (schema privado, no expuesto por la API)
 -- =========================================================================
 
 create schema if not exists private;
@@ -179,7 +190,7 @@ revoke execute on function private.is_trainer() from public, anon;
 grant execute on function private.is_trainer() to authenticated;
 
 -- =========================================================================
--- 4. ALTA DE USUARIOS: auth.users -> public.profiles
+-- 5. ALTA DE USUARIOS: auth.users -> public.profiles
 -- El rol nunca lo elige el cliente. Si el email coincide con el del
 -- entrenador, se crea como 'trainer'; cualquier otro alumno queda
 -- automáticamente vinculado a ese entrenador.
@@ -238,7 +249,7 @@ create trigger profiles_protect_role_trainer
   for each row execute function public.enforce_profile_immutable_fields();
 
 -- =========================================================================
--- 5. ROW LEVEL SECURITY
+-- 6. ROW LEVEL SECURITY
 -- =========================================================================
 
 alter table public.profiles enable row level security;

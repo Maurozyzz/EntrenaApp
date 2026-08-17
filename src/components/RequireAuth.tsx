@@ -9,14 +9,31 @@ interface RequireAuthProps {
 }
 
 export function RequireAuth({ children, role }: RequireAuthProps) {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, profileError, loading, signOut } = useAuth();
 
   if (loading) {
     return <p style={{ padding: 'var(--oc-space-5)', color: 'var(--oc-text-muted)' }}>Cargando…</p>;
   }
 
-  if (!session || !profile) {
+  if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Con sesión pero sin perfil: no redirigir a /login (ahí rebotaría de
+  // vuelta acá y generaría un loop) — mostrar el error en su lugar.
+  if (!profile) {
+    return (
+      <div style={{ padding: 'var(--oc-space-5)', color: 'var(--oc-danger)' }}>
+        <p>No pudimos cargar tu perfil{profileError ? `: ${profileError}` : '.'}</p>
+        <button
+          type="button"
+          onClick={() => signOut()}
+          style={{ background: 'none', border: 'none', color: 'var(--oc-gold)', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    );
   }
 
   if (role && profile.role !== role) {

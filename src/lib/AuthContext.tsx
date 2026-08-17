@@ -11,6 +11,7 @@ interface AuthResult {
 interface AuthContextValue {
   session: Session | null;
   profile: Profile | null;
+  profileError: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (email: string, password: string, fullName: string) => Promise<AuthResult>;
@@ -22,14 +23,17 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
 
     async function loadProfile(userId: string) {
-      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (active) setProfile(data);
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      if (!active) return;
+      setProfile(data);
+      setProfileError(data ? null : (error?.message ?? 'No se encontró el perfil.'));
     }
 
     supabase.auth.getSession().then(({ data }) => {
@@ -83,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ session, profile, profileError, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
