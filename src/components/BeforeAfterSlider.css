@@ -1,0 +1,73 @@
+.oc-compare {
+  max-width: 320px;
+}
+
+.oc-compare__frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--oc-radius-sm);
+  overflow: hidden;
+  box-shadow: var(--oc-shadow-raised);
+  user-select: none;
+}
+
+.oc-compare__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.oc-compare__after {
+  position: absolute;
+  inset: 0;
+}
+
+.oc-compare__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--oc-energy);
+  box-shadow: 0 0 8px rgba(183, 255, 55, 0.6);
+  transform: translateX(-1px);
+  pointer-events: none;
+}
+
+.oc-compare__label {
+  position: absolute;
+  top: var(--oc-space-2);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--oc-text);
+  background: rgba(9, 13, 16, 0.6);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.oc-compare__label--left {
+  left: var(--oc-space-2);
+}
+
+.oc-compare__label--right {
+  right: var(--oc-space-2);
+}
+
+.oc-compare__slider {
+  width: 100%;
+  margin-top: var(--oc-space-3);
+  accent-color: var(--oc-energy);
+}
+
+.oc-compare__dates {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--oc-text-muted);
+  margin-top: var(--oc-space-1);
+}

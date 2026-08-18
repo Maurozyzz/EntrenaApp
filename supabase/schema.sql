@@ -25,6 +25,16 @@ create table if not exists public.exercises (
   created_at timestamptz not null default now()
 );
 
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'exercises_name_unique' and conrelid = 'public.exercises'::regclass
+  ) then
+    alter table public.exercises add constraint exercises_name_unique unique (name);
+  end if;
+end $$;
+
 create table if not exists public.routines (
   id bigint generated always as identity primary key,
   student_id uuid not null references public.profiles (id),
@@ -51,7 +61,7 @@ create table if not exists public.routine_exercises (
 create table if not exists public.workout_logs (
   id bigint generated always as identity primary key,
   student_id uuid not null references public.profiles (id),
-  routine_exercise_id bigint references public.routine_exercises (id),
+  routine_exercise_id bigint references public.routine_exercises (id) on delete set null,
   performed_at timestamptz not null default now(),
   sets_completed smallint,
   reps_completed text,
@@ -82,6 +92,14 @@ create table if not exists public.progress_photos (
   notes text
 );
 
+create table if not exists public.meal_photos (
+  id bigint generated always as identity primary key,
+  student_id uuid not null references public.profiles (id),
+  taken_at date not null default current_date,
+  storage_path text not null,
+  notes text
+);
+
 create table if not exists public.nutrition_plans (
   id bigint generated always as identity primary key,
   student_id uuid not null references public.profiles (id),
@@ -96,6 +114,53 @@ create table if not exists public.nutrition_plans (
   created_at timestamptz not null default now()
 );
 
+-- Catálogo de alimentos con macros por 100g (mismo espíritu que "exercises":
+-- catálogo compartido de lectura, solo el entrenador lo administra).
+create table if not exists public.foods (
+  id bigint generated always as identity primary key,
+  name text not null,
+  calories_per_100g numeric(6, 1) not null,
+  protein_per_100g numeric(5, 1) not null,
+  carbs_per_100g numeric(5, 1) not null,
+  fat_per_100g numeric(5, 1) not null,
+  barcode text,
+  created_by uuid references public.profiles (id),
+  created_at timestamptz not null default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'foods_barcode_unique' and conrelid = 'public.foods'::regclass
+  ) then
+    alter table public.foods add constraint foods_barcode_unique unique (barcode);
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'foods_name_unique' and conrelid = 'public.foods'::regclass
+  ) then
+    alter table public.foods add constraint foods_name_unique unique (name);
+  end if;
+end $$;
+
+-- La dieta detallada que carga el alumno (lo que el entrenador le mandó por
+-- fuera de la app): lista de alimentos + cantidad. Los macros se calculan
+-- en el front a partir del catálogo de "foods", no se guardan acá.
+create table if not exists public.diet_entries (
+  id bigint generated always as identity primary key,
+  student_id uuid not null references public.profiles (id),
+  food_id bigint not null references public.foods (id),
+  quantity_g numeric(6, 1) not null,
+  quantity_unit text not null default 'g' check (quantity_unit in ('g', 'ml')),
+  meal_label text,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.payments (
   id bigint generated always as identity primary key,
   student_id uuid not null references public.profiles (id),
@@ -105,6 +170,7 @@ create table if not exists public.payments (
   period_end date not null,
   status text not null default 'pending' check (status in ('pending', 'paid', 'overdue')),
   paid_at timestamptz,
+  receipt_path text,
   created_at timestamptz not null default now()
 );
 
@@ -122,6 +188,10 @@ create index if not exists workout_logs_student_id_idx on public.workout_logs (s
 create index if not exists workout_logs_routine_exercise_id_idx on public.workout_logs (routine_exercise_id);
 create index if not exists body_measurements_student_id_idx on public.body_measurements (student_id);
 create index if not exists progress_photos_student_id_idx on public.progress_photos (student_id);
+create index if not exists meal_photos_student_id_idx on public.meal_photos (student_id);
+create index if not exists foods_created_by_idx on public.foods (created_by);
+create index if not exists diet_entries_student_id_idx on public.diet_entries (student_id);
+create index if not exists diet_entries_food_id_idx on public.diet_entries (food_id);
 create index if not exists nutrition_plans_student_id_idx on public.nutrition_plans (student_id);
 create index if not exists nutrition_plans_trainer_id_idx on public.nutrition_plans (trainer_id);
 create index if not exists payments_student_id_idx on public.payments (student_id);
@@ -136,6 +206,13 @@ create index if not exists payments_student_id_idx on public.payments (student_i
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
 grant usage on all sequences in schema public to authenticated;
+
+-- Para que las tablas que se creen de acá en más (nuevas features) ya
+-- nazcan con el permiso, sin tener que acordarse de repetir el GRANT.
+alter default privileges in schema public
+  grant select, insert, update, delete on tables to authenticated;
+alter default privileges in schema public
+  grant usage on sequences to authenticated;
 
 -- =========================================================================
 -- 4. FUNCIONES HELPER (schema privado, no expuesto por la API)
@@ -248,6 +325,34 @@ create trigger profiles_protect_role_trainer
   before update on public.profiles
   for each row execute function public.enforce_profile_immutable_fields();
 
+-- El alumno puede actualizar su propio pago solo para adjuntar el
+-- comprobante (receipt_path); cualquier otro campo queda protegido y solo
+-- lo puede cambiar el entrenador (mismo patrón que profiles arriba).
+create or replace function public.enforce_payment_student_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not (select private.is_trainer_of(new.student_id)) then
+    new.student_id := old.student_id;
+    new.amount := old.amount;
+    new.currency := old.currency;
+    new.period_start := old.period_start;
+    new.period_end := old.period_end;
+    new.status := old.status;
+    new.paid_at := old.paid_at;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists payments_protect_fields on public.payments;
+create trigger payments_protect_fields
+  before update on public.payments
+  for each row execute function public.enforce_payment_student_fields();
+
 -- =========================================================================
 -- 6. ROW LEVEL SECURITY
 -- =========================================================================
@@ -266,6 +371,12 @@ alter table public.body_measurements enable row level security;
 alter table public.body_measurements force row level security;
 alter table public.progress_photos enable row level security;
 alter table public.progress_photos force row level security;
+alter table public.meal_photos enable row level security;
+alter table public.meal_photos force row level security;
+alter table public.foods enable row level security;
+alter table public.foods force row level security;
+alter table public.diet_entries enable row level security;
+alter table public.diet_entries force row level security;
 alter table public.nutrition_plans enable row level security;
 alter table public.nutrition_plans force row level security;
 alter table public.payments enable row level security;
@@ -296,6 +407,34 @@ create policy "exercises_write" on public.exercises
   for all to authenticated
   using ((select private.is_trainer()))
   with check ((select private.is_trainer()));
+
+-- foods: catálogo compartido de lectura, solo el entrenador administra.
+create policy "foods_select" on public.foods
+  for select to authenticated
+  using (true);
+
+create policy "foods_write" on public.foods
+  for all to authenticated
+  using ((select private.is_trainer()))
+  with check ((select private.is_trainer()));
+
+-- Cualquiera puede sumar un alimento nuevo al catálogo (ej: al escanear un
+-- código de barras); editar/borrar alimentos existentes sigue siendo solo
+-- del entrenador (policy de arriba).
+create policy "foods_insert_any" on public.foods
+  for insert to authenticated
+  with check (true);
+
+-- diet_entries: el alumno carga y ve la suya, el entrenador solo ve
+-- (mismo patrón que workout_logs).
+create policy "diet_entries_select" on public.diet_entries
+  for select to authenticated
+  using (student_id = (select auth.uid()) or (select private.is_trainer_of(student_id)));
+
+create policy "diet_entries_write" on public.diet_entries
+  for all to authenticated
+  using (student_id = (select auth.uid()) or (select private.is_trainer_of(student_id)))
+  with check (student_id = (select auth.uid()) or (select private.is_trainer_of(student_id)));
 
 -- routines: el alumno ve las suyas, el entrenador administra las de sus alumnos.
 create policy "routines_select" on public.routines
@@ -354,6 +493,11 @@ create policy "progress_photos_all" on public.progress_photos
   using (student_id = (select auth.uid()) or (select private.is_trainer_of(student_id)))
   with check (student_id = (select auth.uid()) or (select private.is_trainer_of(student_id)));
 
+create policy "meal_photos_all" on public.meal_photos
+  for all to authenticated
+  using (student_id = (select auth.uid()) or (select private.is_trainer_of(student_id)))
+  with check (student_id = (select auth.uid()) or (select private.is_trainer_of(student_id)));
+
 -- nutrition_plans: el entrenador administra, el alumno solo lee las suyas.
 create policy "nutrition_plans_select" on public.nutrition_plans
   for select to authenticated
@@ -374,6 +518,234 @@ create policy "payments_write" on public.payments
   for all to authenticated
   using ((select private.is_trainer_of(student_id)))
   with check ((select private.is_trainer_of(student_id)));
+
+-- El alumno puede actualizar su propio pago (solo para subir el comprobante;
+-- el trigger payments_protect_fields bloquea cualquier otro campo).
+create policy "payments_student_update" on public.payments
+  for update to authenticated
+  using (student_id = (select auth.uid()))
+  with check (student_id = (select auth.uid()));
+
+-- =========================================================================
+-- 7. STORAGE: fotos de progreso
+-- Bucket privado. Cada archivo se guarda como "{student_id}/archivo.jpg",
+-- así la policy puede identificar al dueño por la primera carpeta del path.
+-- =========================================================================
+
+insert into storage.buckets (id, name, public)
+values ('progress-photos', 'progress-photos', false)
+on conflict (id) do nothing;
+
+create policy "progress_photos_storage_select" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'progress-photos'
+    and (
+      (storage.foldername(name))[1] = (select auth.uid())::text
+      or (select private.is_trainer_of(((storage.foldername(name))[1])::uuid))
+    )
+  );
+
+create policy "progress_photos_storage_insert" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'progress-photos'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+create policy "progress_photos_storage_delete" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'progress-photos'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+-- =========================================================================
+-- 8. STORAGE: fotos de comidas (mismo patrón que las de progreso)
+-- =========================================================================
+
+insert into storage.buckets (id, name, public)
+values ('meal-photos', 'meal-photos', false)
+on conflict (id) do nothing;
+
+create policy "meal_photos_storage_select" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'meal-photos'
+    and (
+      (storage.foldername(name))[1] = (select auth.uid())::text
+      or (select private.is_trainer_of(((storage.foldername(name))[1])::uuid))
+    )
+  );
+
+create policy "meal_photos_storage_insert" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'meal-photos'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+create policy "meal_photos_storage_delete" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'meal-photos'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+-- =========================================================================
+-- 9b. STORAGE: comprobantes de pago (mismo patrón)
+-- =========================================================================
+
+insert into storage.buckets (id, name, public)
+values ('payment-receipts', 'payment-receipts', false)
+on conflict (id) do nothing;
+
+create policy "payment_receipts_storage_select" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'payment-receipts'
+    and (
+      (storage.foldername(name))[1] = (select auth.uid())::text
+      or (select private.is_trainer_of(((storage.foldername(name))[1])::uuid))
+    )
+  );
+
+create policy "payment_receipts_storage_insert" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'payment-receipts'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+create policy "payment_receipts_storage_delete" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'payment-receipts'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+-- =========================================================================
+-- 9. CATÁLOGO DE EJERCICIOS BASE
+-- Seed idempotente (ON CONFLICT por nombre) con ejercicios comunes de
+-- gimnasio, agrupados por grupo muscular. El video se genera en el front
+-- a partir del nombre (búsqueda embebida de YouTube), no hace falta cargarlo acá.
+-- =========================================================================
+
+insert into public.exercises (name, muscle_group) values
+  ('Press de banca con barra', 'Pecho'),
+  ('Press inclinado con barra', 'Pecho'),
+  ('Press declinado con barra', 'Pecho'),
+  ('Press de banca con mancuernas', 'Pecho'),
+  ('Press inclinado con mancuernas', 'Pecho'),
+  ('Aperturas con mancuernas', 'Pecho'),
+  ('Cruce de poleas (crossover)', 'Pecho'),
+  ('Fondos en paralelas', 'Pecho'),
+  ('Pullover con mancuerna', 'Pecho'),
+  ('Press en máquina Smith', 'Pecho'),
+  ('Dominadas', 'Espalda'),
+  ('Jalón al pecho en polea', 'Espalda'),
+  ('Remo con barra', 'Espalda'),
+  ('Remo con mancuerna a una mano', 'Espalda'),
+  ('Remo en polea baja', 'Espalda'),
+  ('Remo en máquina', 'Espalda'),
+  ('Peso muerto', 'Espalda'),
+  ('Hiperextensiones', 'Espalda'),
+  ('Face pull', 'Espalda'),
+  ('Pull-over en polea', 'Espalda'),
+  ('Sentadilla con barra', 'Piernas'),
+  ('Sentadilla frontal', 'Piernas'),
+  ('Prensa de piernas', 'Piernas'),
+  ('Zancadas (lunges)', 'Piernas'),
+  ('Sentadilla búlgara', 'Piernas'),
+  ('Peso muerto rumano', 'Piernas'),
+  ('Extensión de cuádriceps en máquina', 'Piernas'),
+  ('Curl femoral en máquina', 'Piernas'),
+  ('Elevación de talones de pie (gemelos)', 'Piernas'),
+  ('Elevación de talones sentado (gemelos)', 'Piernas'),
+  ('Hip thrust con barra', 'Glúteos'),
+  ('Puente de glúteo', 'Glúteos'),
+  ('Patada de glúteo en polea', 'Glúteos'),
+  ('Abducción de cadera en máquina', 'Glúteos'),
+  ('Press militar con barra', 'Hombros'),
+  ('Press de hombros con mancuernas', 'Hombros'),
+  ('Press Arnold', 'Hombros'),
+  ('Elevaciones laterales con mancuernas', 'Hombros'),
+  ('Elevaciones frontales con mancuernas', 'Hombros'),
+  ('Pájaro (elevaciones posteriores)', 'Hombros'),
+  ('Remo al mentón (upright row)', 'Hombros'),
+  ('Curl con barra', 'Bíceps'),
+  ('Curl con mancuernas alternado', 'Bíceps'),
+  ('Curl martillo', 'Bíceps'),
+  ('Curl concentrado', 'Bíceps'),
+  ('Curl en polea baja', 'Bíceps'),
+  ('Curl predicador (banco Scott)', 'Bíceps'),
+  ('Press francés', 'Tríceps'),
+  ('Extensión de tríceps en polea alta', 'Tríceps'),
+  ('Fondos entre bancos', 'Tríceps'),
+  ('Patada de tríceps con mancuerna', 'Tríceps'),
+  ('Press cerrado en banca', 'Tríceps'),
+  ('Plancha (plank)', 'Core'),
+  ('Abdominales crunch', 'Core'),
+  ('Elevación de piernas colgado', 'Core'),
+  ('Rueda abdominal (ab wheel)', 'Core'),
+  ('Giro ruso (russian twist)', 'Core'),
+  ('Abdominales en polea alta', 'Core'),
+  ('Correr en cinta', 'Cardio'),
+  ('Bicicleta fija', 'Cardio'),
+  ('Remo (máquina de cardio)', 'Cardio'),
+  ('Escaladora (stairmaster)', 'Cardio'),
+  ('Salto a la comba', 'Cardio')
+on conflict (name) do nothing;
+
+-- =========================================================================
+-- 10. CATÁLOGO DE ALIMENTOS BASE (macros por 100g, valores de referencia)
+-- Seed idempotente. El alumno arma su dieta eligiendo de acá + cantidad.
+-- =========================================================================
+
+insert into public.foods (name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g) values
+  ('Pechuga de pollo', 165, 31, 0, 3.6),
+  ('Carne vacuna magra', 250, 26, 0, 15),
+  ('Pavo (pechuga)', 135, 30, 0, 1),
+  ('Huevo entero', 155, 13, 1.1, 11),
+  ('Clara de huevo', 52, 11, 0.7, 0.2),
+  ('Atún al natural', 116, 26, 0, 1),
+  ('Salmón', 208, 20, 0, 13),
+  ('Merluza', 90, 18, 0, 1),
+  ('Whey protein (polvo)', 380, 80, 8, 5),
+  ('Queso fresco / cottage', 98, 11, 3.4, 4.3),
+  ('Yogur griego natural', 59, 10, 3.6, 0.4),
+  ('Lentejas cocidas', 116, 9, 20, 0.4),
+  ('Garbanzos cocidos', 164, 9, 27, 2.6),
+  ('Tofu', 76, 8, 1.9, 4.8),
+  ('Arroz blanco cocido', 130, 2.7, 28, 0.3),
+  ('Arroz integral cocido', 111, 2.6, 23, 0.9),
+  ('Papa cocida', 87, 1.9, 20, 0.1),
+  ('Batata cocida', 90, 2, 21, 0.1),
+  ('Avena (copos secos)', 389, 17, 66, 7),
+  ('Pan integral', 247, 13, 41, 4.2),
+  ('Pan blanco', 265, 9, 49, 3.2),
+  ('Pasta cocida', 131, 5, 25, 1.1),
+  ('Quinoa cocida', 120, 4.4, 21, 1.9),
+  ('Tortilla de trigo', 310, 8, 51, 8),
+  ('Choclo', 96, 3.4, 21, 1.5),
+  ('Banana', 89, 1.1, 23, 0.3),
+  ('Manzana', 52, 0.3, 14, 0.2),
+  ('Naranja', 47, 0.9, 12, 0.1),
+  ('Aceite de oliva', 884, 0, 0, 100),
+  ('Palta', 160, 2, 9, 15),
+  ('Manteca de maní', 588, 25, 20, 50),
+  ('Almendras', 579, 21, 22, 50),
+  ('Nueces', 654, 15, 14, 65),
+  ('Semillas de chía', 486, 17, 42, 31),
+  ('Leche entera', 61, 3.2, 4.8, 3.3),
+  ('Leche descremada', 34, 3.4, 5, 0.1),
+  ('Queso cremoso', 300, 20, 2, 24),
+  ('Brócoli', 34, 2.8, 7, 0.4),
+  ('Espinaca', 23, 2.9, 3.6, 0.4),
+  ('Zanahoria', 41, 0.9, 10, 0.2),
+  ('Tomate', 18, 0.9, 3.9, 0.2),
+  ('Lechuga', 15, 1.4, 2.9, 0.2)
+on conflict (name) do nothing;
 
 -- =========================================================================
 -- Cómo usar este script

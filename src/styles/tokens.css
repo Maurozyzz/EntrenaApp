@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Cinzel:wght@700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Oswald:wght@500;600;700&display=swap');
 
 :root {
   --oc-ink: #090d10;
@@ -12,17 +12,35 @@
   --oc-danger: #e5484d;
   --oc-success: #4fae6a;
 
-  --oc-font-display: 'Cinzel', serif;
+  --oc-font-display: 'Oswald', 'Montserrat', sans-serif;
   --oc-font-body: 'Montserrat', -apple-system, sans-serif;
 
-  --oc-radius: 12px;
-  --oc-radius-sm: 8px;
+  --oc-radius: 16px;
+  --oc-radius-sm: 10px;
   --oc-space-1: 4px;
   --oc-space-2: 8px;
   --oc-space-3: 12px;
   --oc-space-4: 16px;
   --oc-space-5: 24px;
   --oc-space-6: 32px;
+
+  /* Superficies y sombras — look 3D marcado (neumorphism) sobre fondo oscuro */
+  --oc-surface-gradient: linear-gradient(155deg, #1c2530 0%, #0d1216 100%);
+  --oc-surface-gradient-hover: linear-gradient(155deg, #212c38 0%, #0f151a 100%);
+  /* Vidrio esmerilado: deja ver el fondo (foto del gimnasio) a través de las
+     tarjetas en vez de un panel sólido plano. */
+  --oc-glass: linear-gradient(155deg, rgba(32, 42, 53, 0.55) 0%, rgba(13, 18, 22, 0.72) 100%);
+  --oc-glass-hover: linear-gradient(155deg, rgba(38, 50, 63, 0.6) 0%, rgba(15, 21, 26, 0.75) 100%);
+  --oc-shadow-raised: 16px 16px 32px rgba(0, 0, 0, 0.6), -10px -10px 24px rgba(255, 255, 255, 0.045),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --oc-shadow-raised-lg: 22px 22px 44px rgba(0, 0, 0, 0.65), -14px -14px 32px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --oc-shadow-raised-hover: 20px 20px 40px rgba(0, 0, 0, 0.65), -12px -12px 28px rgba(255, 255, 255, 0.055),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --oc-shadow-raised-sm: 7px 7px 16px rgba(0, 0, 0, 0.55), -5px -5px 12px rgba(255, 255, 255, 0.035),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --oc-shadow-pressed: inset 4px 4px 9px rgba(0, 0, 0, 0.65), inset -4px -4px 9px rgba(255, 255, 255, 0.025);
+  --oc-shadow-inset: inset 3px 3px 7px rgba(0, 0, 0, 0.6), inset -3px -3px 7px rgba(255, 255, 255, 0.025);
 }
 
 * {
@@ -43,6 +61,38 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+}
+
+/* Fondo de gimnasio con profundidad: la foto se mueve levemente con el
+   mouse (--oc-parallax-x/y, seteadas en App.tsx) dando sensación de 3D. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -60px;
+  background-image: url('https://images.unsplash.com/photo-1623874514711-0f321325f318?fm=jpg&q=65&w=1800&auto=format&fit=crop');
+  background-size: cover;
+  background-position: center 40%;
+  filter: brightness(0.5) saturate(0.7) contrast(1.05);
+  transform: translate3d(calc(var(--oc-parallax-x, 0px) * -1), calc(var(--oc-parallax-y, 0px) * -1), 0) scale(1.08);
+  transition: transform 0.25s ease-out;
+  z-index: -2;
+  will-change: transform;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at top, rgba(13, 18, 22, 0.08) 0%, rgba(9, 13, 16, 0.4) 55%, rgba(9, 13, 16, 0.62) 100%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    transition: none;
+    transform: scale(1.08);
+  }
 }
 
 #root {

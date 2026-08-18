@@ -1,0 +1,26 @@
+.oc-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  box-shadow: var(--oc-shadow-raised-sm);
+}
+
+.oc-pill--pending {
+  background: var(--oc-surface-gradient);
+  color: var(--oc-text-muted);
+}
+
+.oc-pill--paid {
+  background: linear-gradient(150deg, #7bdb9a, var(--oc-success));
+  color: #06210f;
+}
+
+.oc-pill--overdue {
+  background: linear-gradient(150deg, #f0797d, var(--oc-danger));
+  color: #2a0607;
+}

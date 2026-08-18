@@ -6,7 +6,9 @@ import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Field, Input } from '../../components/ui/Input';
+import { youtubeSearchEmbedUrl } from '../../lib/youtube';
 import type { Exercise } from '../../lib/types';
+import '../student/StudentRoutine.css';
 
 const NAV = [
   { to: '/coach', label: 'Alumnos' },
@@ -20,6 +22,9 @@ export function CoachExercises() {
   const [name, setName] = useState('');
   const [muscleGroup, setMuscleGroup] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [videoFor, setVideoFor] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
 
   async function loadExercises() {
     const { data } = await supabase.from('exercises').select('*').order('name', { ascending: true });
@@ -34,21 +39,37 @@ export function CoachExercises() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!profile) return;
+    setError(null);
     setSaving(true);
-    await supabase.from('exercises').insert({
+    const { error: insertErr } = await supabase.from('exercises').insert({
       name,
       muscle_group: muscleGroup || null,
       created_by: profile.id,
     });
-    setName('');
-    setMuscleGroup('');
+    if (insertErr) {
+      setError(insertErr.code === '23505' ? 'Ya existe un ejercicio con ese nombre.' : insertErr.message);
+    } else {
+      setName('');
+      setMuscleGroup('');
+    }
     setSaving(false);
     loadExercises();
   }
 
+  const filteredExercises = exercises.filter((exercise) => {
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      exercise.name.toLowerCase().includes(query) || (exercise.muscle_group ?? '').toLowerCase().includes(query)
+    );
+  });
+
   return (
     <AppShell links={NAV}>
       <h1 style={{ color: 'var(--oc-gold)' }}>Ejercicios</h1>
+      <p style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>
+        Ya viene precargado con un catálogo amplio de ejercicios comunes — sumá acá los que te falten.
+      </p>
 
       <Card style={{ marginBottom: 'var(--oc-space-5)' }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 'var(--oc-space-3)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -66,19 +87,55 @@ export function CoachExercises() {
             {saving ? 'Guardando…' : 'Agregar'}
           </Button>
         </form>
+        {error && <p style={{ color: 'var(--oc-danger)', fontSize: 13, marginTop: 'var(--oc-space-2)' }}>{error}</p>}
       </Card>
+
+      {!loading && exercises.length > 0 && (
+        <div style={{ marginBottom: 'var(--oc-space-4)' }}>
+          <Field label="Buscar">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Nombre o grupo muscular…"
+            />
+          </Field>
+        </div>
+      )}
 
       {loading ? (
         <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
       ) : exercises.length === 0 ? (
         <p style={{ color: 'var(--oc-text-muted)' }}>Todavía no cargaste ejercicios.</p>
+      ) : filteredExercises.length === 0 ? (
+        <p style={{ color: 'var(--oc-text-muted)' }}>Ningún ejercicio coincide con "{search}".</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-2)' }}>
-          {exercises.map((exercise) => (
+          {filteredExercises.map((exercise) => (
             <Card key={exercise.id} style={{ padding: 'var(--oc-space-3) var(--oc-space-4)' }}>
-              <strong>{exercise.name}</strong>
-              {exercise.muscle_group && (
-                <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}> · {exercise.muscle_group}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--oc-space-2)' }}>
+                <span>
+                  <strong>{exercise.name}</strong>
+                  {exercise.muscle_group && (
+                    <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}> · {exercise.muscle_group}</span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setVideoFor(videoFor === exercise.id ? null : exercise.id)}
+                  style={{ background: 'none', border: 'none', color: 'var(--oc-gold)', cursor: 'pointer', fontSize: 13 }}
+                >
+                  {videoFor === exercise.id ? 'Ocultar video' : '▶ Ver video'}
+                </button>
+              </div>
+              {videoFor === exercise.id && (
+                <div className="oc-video-frame">
+                  <iframe
+                    src={youtubeSearchEmbedUrl(exercise.name)}
+                    title={`Video: ${exercise.name}`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
               )}
             </Card>
           ))}

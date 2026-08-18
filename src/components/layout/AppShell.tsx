@@ -1,15 +1,16 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { Button } from '../ui/Button';
+import './AppShell.css';
 
-interface NavLink {
+interface NavItem {
   to: string;
   label: string;
 }
 
 interface AppShellProps {
-  links: NavLink[];
+  links: NavItem[];
   children: ReactNode;
 }
 
@@ -18,26 +19,21 @@ export function AppShell({ links, children }: AppShellProps) {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 'var(--oc-space-3)',
-          padding: 'var(--oc-space-4) var(--oc-space-5)',
-          borderBottom: '1px solid var(--oc-border)',
-        }}
-      >
+      <header className="oc-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-5)', flexWrap: 'wrap' }}>
           <span style={{ fontFamily: 'var(--oc-font-display)', color: 'var(--oc-gold)', fontWeight: 700 }}>
             Origen Coaching
           </span>
-          <nav style={{ display: 'flex', gap: 'var(--oc-space-4)', flexWrap: 'wrap' }}>
+          <nav className="oc-nav">
             {links.map((link) => (
-              <Link key={link.to} to={link.to} style={{ color: 'var(--oc-text-muted)', fontSize: 14 }}>
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.to === '/coach' || link.to === '/mi'}
+                className={({ isActive }) => `oc-nav__link${isActive ? ' oc-nav__link--active' : ''}`}
+              >
                 {link.label}
-              </Link>
+              </NavLink>
             ))}
           </nav>
         </div>

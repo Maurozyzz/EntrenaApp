@@ -11,16 +11,18 @@
 }
 
 .oc-input {
-  background: var(--oc-ink);
-  border: 1px solid var(--oc-border);
+  background: #0b0f12;
+  border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: var(--oc-radius-sm);
   padding: 10px 12px;
   color: var(--oc-text);
   width: 100%;
   box-sizing: border-box;
+  box-shadow: var(--oc-shadow-inset);
+  transition: box-shadow 0.15s ease;
 }
 
 .oc-input:focus-visible {
-  outline: 2px solid var(--oc-energy);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--oc-shadow-inset), 0 0 0 2px var(--oc-energy);
 }

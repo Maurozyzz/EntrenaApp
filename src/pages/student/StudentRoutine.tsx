@@ -7,7 +7,11 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Field, Input } from '../../components/ui/Input';
 import { STUDENT_NAV } from './nav';
+import { youtubeSearchEmbedUrl } from '../../lib/youtube';
+import { WorkoutHistory } from '../../components/WorkoutHistory';
+import { dayLabel, groupByDay, muscleGroupSummary } from '../../lib/days';
 import type { Routine, RoutineExerciseWithName } from '../../lib/types';
+import './StudentRoutine.css';
 
 export function StudentRoutine() {
   const { profile } = useAuth();
@@ -15,9 +19,11 @@ export function StudentRoutine() {
   const [items, setItems] = useState<RoutineExerciseWithName[]>([]);
   const [loading, setLoading] = useState(true);
   const [logging, setLogging] = useState<number | null>(null);
+  const [videoFor, setVideoFor] = useState<number | null>(null);
   const [setsCompleted, setSetsCompleted] = useState('');
   const [weightUsed, setWeightUsed] = useState('');
   const [saving, setSaving] = useState(false);
+  const [historyKey, setHistoryKey] = useState(0);
 
   useEffect(() => {
     if (!profile) return;
@@ -40,7 +46,7 @@ export function StudentRoutine() {
     if (routineData) {
       const { data: itemsData } = await supabase
         .from('routine_exercises')
-        .select('*, exercises(name)')
+        .select('*, exercises(name, muscle_group)')
         .eq('routine_id', routineData.id)
         .order('order_index', { ascending: true });
       setItems((itemsData as RoutineExerciseWithName[]) ?? []);
@@ -62,6 +68,7 @@ export function StudentRoutine() {
     setLogging(null);
     setSetsCompleted('');
     setWeightUsed('');
+    setHistoryKey((k) => k + 1);
   }
 
   return (
@@ -75,46 +82,87 @@ export function StudentRoutine() {
       ) : items.length === 0 ? (
         <p style={{ color: 'var(--oc-text-muted)' }}>Tu rutina todavía no tiene ejercicios cargados.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)', marginTop: 'var(--oc-space-4)' }}>
-          {items.map((item) => (
-            <Card key={item.id}>
-              <strong>{item.exercises?.name}</strong>
-              <p style={{ color: 'var(--oc-text-muted)', fontSize: 13, marginTop: 'var(--oc-space-1)' }}>
-                {item.sets ?? '—'} series x {item.reps ?? '—'} reps
-                {item.weight_target ? ` · objetivo ${item.weight_target}kg` : ''}
-                {item.rest_seconds ? ` · descanso ${item.rest_seconds}s` : ''}
-              </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-5)', marginTop: 'var(--oc-space-4)' }}>
+          {groupByDay(items).map(({ day, items: dayItems }) => (
+            <div key={day ?? 'none'}>
+              <h2 style={{ color: 'var(--oc-gold)', fontSize: 18 }}>
+                {dayLabel(day)}
+                {muscleGroupSummary(dayItems) && (
+                  <span style={{ color: 'var(--oc-text-muted)', fontWeight: 400, fontSize: 14 }}>
+                    {' '}
+                    · {muscleGroupSummary(dayItems)}
+                  </span>
+                )}
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
+                {dayItems.map((item) => (
+                  <Card key={item.id}>
+                    <strong>{item.exercises?.name}</strong>
+                    <p style={{ color: 'var(--oc-text-muted)', fontSize: 13, marginTop: 'var(--oc-space-1)' }}>
+                      {item.sets ?? '—'} series x {item.reps ?? '—'} reps
+                      {item.weight_target ? ` · objetivo ${item.weight_target}kg` : ''}
+                      {item.rest_seconds ? ` · descanso ${item.rest_seconds}s` : ''}
+                    </p>
 
-              {logging === item.id ? (
-                <form
-                  onSubmit={(e) => logWorkout(e, item.id)}
-                  style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 'var(--oc-space-3)' }}
-                >
-                  <div style={{ width: 90 }}>
-                    <Field label="Series hechas">
-                      <Input value={setsCompleted} onChange={(e) => setSetsCompleted(e.target.value)} inputMode="numeric" />
-                    </Field>
-                  </div>
-                  <div style={{ width: 90 }}>
-                    <Field label="Peso usado">
-                      <Input value={weightUsed} onChange={(e) => setWeightUsed(e.target.value)} inputMode="decimal" />
-                    </Field>
-                  </div>
-                  <Button type="submit" disabled={saving}>
-                    {saving ? 'Guardando…' : 'Guardar'}
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={() => setLogging(null)}>
-                    Cancelar
-                  </Button>
-                </form>
-              ) : (
-                <Button variant="secondary" onClick={() => setLogging(item.id)} style={{ marginTop: 'var(--oc-space-3)' }}>
-                  Registrar serie
-                </Button>
-              )}
-            </Card>
+                    {logging === item.id ? (
+                      <form
+                        onSubmit={(e) => logWorkout(e, item.id)}
+                        style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 'var(--oc-space-3)' }}
+                      >
+                        <div style={{ width: 90 }}>
+                          <Field label="Series hechas">
+                            <Input value={setsCompleted} onChange={(e) => setSetsCompleted(e.target.value)} inputMode="numeric" />
+                          </Field>
+                        </div>
+                        <div style={{ width: 90 }}>
+                          <Field label="Peso usado">
+                            <Input value={weightUsed} onChange={(e) => setWeightUsed(e.target.value)} inputMode="decimal" />
+                          </Field>
+                        </div>
+                        <Button type="submit" disabled={saving}>
+                          {saving ? 'Guardando…' : 'Guardar'}
+                        </Button>
+                        <Button type="button" variant="ghost" onClick={() => setLogging(null)}>
+                          Cancelar
+                        </Button>
+                      </form>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', marginTop: 'var(--oc-space-3)' }}>
+                        <Button variant="secondary" onClick={() => setLogging(item.id)}>
+                          Registrar serie
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setVideoFor(videoFor === item.id ? null : item.id)}
+                        >
+                          {videoFor === item.id ? 'Ocultar video' : '▶ Ver cómo hacerlo'}
+                        </Button>
+                      </div>
+                    )}
+
+                    {videoFor === item.id && item.exercises?.name && (
+                      <div className="oc-video-frame">
+                        <iframe
+                          src={youtubeSearchEmbedUrl(item.exercises.name)}
+                          title={`Video: ${item.exercises.name}`}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
+      )}
+
+      {profile && (
+        <>
+          <h2 style={{ color: 'var(--oc-gold)', marginTop: 'var(--oc-space-6)' }}>Historial</h2>
+          <WorkoutHistory key={historyKey} studentId={profile.id} />
+        </>
       )}
     </AppShell>
   );

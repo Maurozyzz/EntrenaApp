@@ -1,0 +1,65 @@
+.oc-chart {
+  position: relative;
+}
+
+.oc-chart__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--oc-space-2);
+}
+
+.oc-chart__title {
+  font-size: 13px;
+  color: var(--oc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.oc-chart__endpoint {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--oc-energy);
+}
+
+.oc-chart__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: none;
+}
+
+.oc-chart__gridline {
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 1;
+}
+
+.oc-chart__crosshair {
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 1;
+}
+
+.oc-chart__tooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  background: var(--oc-surface-gradient);
+  box-shadow: var(--oc-shadow-raised-sm);
+  border-radius: var(--oc-radius-sm);
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.oc-chart__tooltip strong {
+  color: var(--oc-text);
+  font-size: 13px;
+}
+
+.oc-chart__tooltip span {
+  color: var(--oc-text-muted);
+}

@@ -43,7 +43,7 @@ export interface RoutineExercise {
 }
 
 export interface RoutineExerciseWithName extends RoutineExercise {
-  exercises: { name: string } | null;
+  exercises: { name: string; muscle_group: string | null } | null;
 }
 
 export interface WorkoutLog {
@@ -57,6 +57,21 @@ export interface WorkoutLog {
   notes: string | null;
 }
 
+export interface WorkoutLogWithExercise extends WorkoutLog {
+  routine_exercises: { exercises: { name: string } | null } | null;
+}
+
+export interface PhotoLog {
+  id: number;
+  student_id: string;
+  taken_at: string;
+  storage_path: string;
+  notes: string | null;
+}
+
+export type ProgressPhoto = PhotoLog;
+export type MealPhoto = PhotoLog;
+
 export interface BodyMeasurement {
   id: number;
   student_id: string;
@@ -68,6 +83,41 @@ export interface BodyMeasurement {
   hip_cm: number | null;
   arm_cm: number | null;
   notes: string | null;
+}
+
+export interface Food {
+  id: number;
+  name: string;
+  calories_per_100g: number;
+  protein_per_100g: number;
+  carbs_per_100g: number;
+  fat_per_100g: number;
+  barcode: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export type QuantityUnit = 'g' | 'ml';
+
+export interface DietEntry {
+  id: number;
+  student_id: string;
+  food_id: number;
+  quantity_g: number;
+  quantity_unit: QuantityUnit;
+  meal_label: string | null;
+  created_at: string;
+}
+
+export interface DietEntryWithFood extends DietEntry {
+  foods: Food | null;
+}
+
+export interface Macros {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
 }
 
 export interface NutritionPlan {
@@ -95,5 +145,6 @@ export interface Payment {
   period_end: string;
   status: PaymentStatus;
   paid_at: string | null;
+  receipt_path: string | null;
   created_at: string;
 }

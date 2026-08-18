@@ -5,17 +5,32 @@ import { useAuth } from '../../lib/AuthContext';
 import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Field, Input } from '../../components/ui/Input';
+import { Field, Input, Select } from '../../components/ui/Input';
+import { PhotoLogUploader } from '../../components/PhotoLogUploader';
+import { ProgressLineChart } from '../../components/ProgressLineChart';
+import { BeforeAfterSlider } from '../../components/BeforeAfterSlider';
 import { STUDENT_NAV } from './nav';
 import type { BodyMeasurement } from '../../lib/types';
+
+const PHOTOS_BUCKET = 'progress-photos';
+
+type Metric = 'weight_kg' | 'waist_cm';
+
+const METRIC_LABELS: Record<Metric, { label: string; unit: string }> = {
+  weight_kg: { label: 'Peso', unit: 'kg' },
+  waist_cm: { label: 'Cintura', unit: 'cm' },
+};
 
 export function StudentProgress() {
   const { profile } = useAuth();
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [metric, setMetric] = useState<Metric>('weight_kg');
   const [weightKg, setWeightKg] = useState('');
   const [waistCm, setWaistCm] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const [comparePhotos, setComparePhotos] = useState<{ before: { url: string; date: string }; after: { url: string; date: string } } | null>(null);
 
   async function load() {
     if (!profile) return;
@@ -29,8 +44,35 @@ export function StudentProgress() {
     setLoading(false);
   }
 
+  async function loadComparePhotos() {
+    if (!profile) return;
+    const { data } = await supabase
+      .from('progress_photos')
+      .select('*')
+      .eq('student_id', profile.id)
+      .order('taken_at', { ascending: true });
+    const rows = data ?? [];
+    if (rows.length < 2) {
+      setComparePhotos(null);
+      return;
+    }
+    const oldest = rows[0];
+    const newest = rows[rows.length - 1];
+    const [{ data: beforeSigned }, { data: afterSigned }] = await Promise.all([
+      supabase.storage.from(PHOTOS_BUCKET).createSignedUrl(oldest.storage_path, 60 * 60),
+      supabase.storage.from(PHOTOS_BUCKET).createSignedUrl(newest.storage_path, 60 * 60),
+    ]);
+    if (beforeSigned?.signedUrl && afterSigned?.signedUrl) {
+      setComparePhotos({
+        before: { url: beforeSigned.signedUrl, date: oldest.taken_at },
+        after: { url: afterSigned.signedUrl, date: newest.taken_at },
+      });
+    }
+  }
+
   useEffect(() => {
     load();
+    loadComparePhotos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
 
@@ -48,6 +90,11 @@ export function StudentProgress() {
     setSaving(false);
     load();
   }
+
+  const chartPoints = measurements
+    .filter((m) => m[metric] != null)
+    .map((m) => ({ date: m.measured_at, value: m[metric] as number }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   return (
     <AppShell links={STUDENT_NAV}>
@@ -71,6 +118,20 @@ export function StudentProgress() {
         </form>
       </Card>
 
+      {!loading && measurements.length > 0 && (
+        <Card style={{ marginBottom: 'var(--oc-space-4)' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--oc-space-2)' }}>
+            <div style={{ width: 140 }}>
+              <Select value={metric} onChange={(e) => setMetric(e.target.value as Metric)}>
+                <option value="weight_kg">Peso</option>
+                <option value="waist_cm">Cintura</option>
+              </Select>
+            </div>
+          </div>
+          <ProgressLineChart points={chartPoints} label={METRIC_LABELS[metric].label} unit={METRIC_LABELS[metric].unit} />
+        </Card>
+      )}
+
       {loading ? (
         <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
       ) : measurements.length === 0 ? (
@@ -87,6 +148,28 @@ export function StudentProgress() {
             </Card>
           ))}
         </div>
+      )}
+
+      {profile && (
+        <>
+          <h2 style={{ color: 'var(--oc-gold)', marginTop: 'var(--oc-space-6)' }}>Fotos de progreso</h2>
+
+          {comparePhotos && (
+            <Card style={{ marginBottom: 'var(--oc-space-4)' }}>
+              <p style={{ color: 'var(--oc-text-muted)', fontSize: 13, marginTop: 0 }}>Arrastrá para comparar</p>
+              <BeforeAfterSlider before={comparePhotos.before} after={comparePhotos.after} />
+            </Card>
+          )}
+
+          <PhotoLogUploader
+            bucket="progress-photos"
+            table="progress_photos"
+            studentId={profile.id}
+            uploadLabel="+ Subir una foto"
+            emptyLabel="Todavía no subiste fotos."
+            onUploaded={loadComparePhotos}
+          />
+        </>
       )}
     </AppShell>
   );

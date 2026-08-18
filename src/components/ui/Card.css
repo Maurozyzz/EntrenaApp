@@ -1,6 +1,16 @@
 .oc-card {
-  background: var(--oc-surface);
-  border: 1px solid var(--oc-border);
+  background: var(--oc-glass);
+  backdrop-filter: blur(20px) saturate(1.15);
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--oc-radius);
   padding: var(--oc-space-5);
+  box-shadow: var(--oc-shadow-raised);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.oc-card:hover {
+  background: var(--oc-glass-hover);
+  transform: translateY(-3px);
+  box-shadow: var(--oc-shadow-raised-hover);
 }

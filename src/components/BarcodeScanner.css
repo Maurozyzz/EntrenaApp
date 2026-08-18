@@ -1,0 +1,28 @@
+.oc-scanner-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 13, 16, 0.9);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--oc-space-4);
+}
+
+.oc-scanner-box {
+  background: var(--oc-surface-gradient);
+  box-shadow: var(--oc-shadow-raised-lg);
+  border-radius: var(--oc-radius);
+  padding: var(--oc-space-4);
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.oc-scanner-video {
+  width: 100%;
+  border-radius: var(--oc-radius-sm);
+  background: #000;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}

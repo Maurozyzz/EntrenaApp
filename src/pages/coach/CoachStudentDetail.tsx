@@ -7,12 +7,25 @@ import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Field, Input, Select } from '../../components/ui/Input';
-import type { Exercise, NutritionPlan, Payment, Profile, Routine, RoutineExerciseWithName } from '../../lib/types';
+import { StatusPill } from '../../components/ui/StatusPill';
+import { DietBuilder } from '../../components/DietBuilder';
+import { WorkoutHistory } from '../../components/WorkoutHistory';
+import { DAYS, dayLabel, groupByDay, muscleGroupSummary } from '../../lib/days';
+import type {
+  Exercise,
+  NutritionPlan,
+  Payment,
+  Profile,
+  Routine,
+  RoutineExerciseWithName,
+} from '../../lib/types';
 
 const NAV = [
   { to: '/coach', label: 'Alumnos' },
   { to: '/coach/ejercicios', label: 'Ejercicios' },
 ];
+
+const RECEIPTS_BUCKET = 'payment-receipts';
 
 export function CoachStudentDetail() {
   const { id: studentId } = useParams<{ id: string }>();
@@ -32,6 +45,10 @@ export function CoachStudentDetail() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-5)', marginTop: 'var(--oc-space-4)' }}>
         <RoutineSection studentId={studentId} trainerId={profile.id} />
+        <Card>
+          <h2 style={{ marginTop: 0 }}>Historial de entrenamientos</h2>
+          <WorkoutHistory studentId={studentId} />
+        </Card>
         <NutritionSection studentId={studentId} trainerId={profile.id} />
         <PaymentsSection studentId={studentId} />
       </div>
@@ -45,9 +62,11 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [exerciseId, setExerciseId] = useState('');
+  const [dayOfWeek, setDayOfWeek] = useState('');
   const [sets, setSets] = useState('');
   const [reps, setReps] = useState('');
   const [weightTarget, setWeightTarget] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -61,7 +80,7 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
     if (routineData) {
       const { data: itemsData } = await supabase
         .from('routine_exercises')
-        .select('*, exercises(name)')
+        .select('*, exercises(name, muscle_group)')
         .eq('routine_id', routineData.id)
         .order('order_index', { ascending: true });
       setItems((itemsData as RoutineExerciseWithName[]) ?? []);
@@ -88,14 +107,20 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
   async function addExercise(e: FormEvent) {
     e.preventDefault();
     if (!routine || !exerciseId) return;
-    await supabase.from('routine_exercises').insert({
+    setError(null);
+    const { error: insertErr } = await supabase.from('routine_exercises').insert({
       routine_id: routine.id,
       exercise_id: Number(exerciseId),
+      day_of_week: dayOfWeek ? Number(dayOfWeek) : null,
       order_index: items.length,
       sets: sets ? Number(sets) : null,
       reps: reps || null,
       weight_target: weightTarget ? Number(weightTarget) : null,
     });
+    if (insertErr) {
+      setError(insertErr.message);
+      return;
+    }
     setExerciseId('');
     setSets('');
     setReps('');
@@ -104,13 +129,19 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
   }
 
   async function removeExercise(id: number) {
-    await supabase.from('routine_exercises').delete().eq('id', id);
+    setError(null);
+    const { error: deleteErr } = await supabase.from('routine_exercises').delete().eq('id', id);
+    if (deleteErr) {
+      setError(deleteErr.message);
+      return;
+    }
     load();
   }
 
   return (
     <Card>
       <h2 style={{ marginTop: 0 }}>Rutina</h2>
+      {error && <p style={{ color: 'var(--oc-danger)', fontSize: 13 }}>{error}</p>}
       {loading ? (
         <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
       ) : !routine ? (
@@ -123,41 +154,66 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
           {items.length === 0 ? (
             <p style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>Todavía no agregaste ejercicios.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-2)', marginBottom: 'var(--oc-space-4)' }}>
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: 'var(--oc-space-2) var(--oc-space-3)',
-                    border: '1px solid var(--oc-border)',
-                    borderRadius: 'var(--oc-radius-sm)',
-                    gap: 'var(--oc-space-3)',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <span>
-                    <strong>{item.exercises?.name}</strong>
-                    <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>
-                      {' '}
-                      · {item.sets ?? '—'}x{item.reps ?? '—'} {item.weight_target ? `· ${item.weight_target}kg` : ''}
-                    </span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeExercise(item.id)}
-                    style={{ background: 'none', border: 'none', color: 'var(--oc-danger)', cursor: 'pointer', fontSize: 13 }}
-                  >
-                    Quitar
-                  </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-4)', marginBottom: 'var(--oc-space-4)' }}>
+              {groupByDay(items).map(({ day, items: dayItems }) => (
+                <div key={day ?? 'none'}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--oc-gold)', marginBottom: 'var(--oc-space-2)' }}>
+                    {dayLabel(day)}
+                    {muscleGroupSummary(dayItems) && (
+                      <span style={{ color: 'var(--oc-text-muted)', fontWeight: 400 }}> · {muscleGroupSummary(dayItems)}</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-2)' }}>
+                    {dayItems.map((item) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: 'var(--oc-space-2) var(--oc-space-3)',
+                          background: 'var(--oc-surface-gradient)',
+                          boxShadow: 'var(--oc-shadow-raised-sm)',
+                          borderRadius: 'var(--oc-radius-sm)',
+                          gap: 'var(--oc-space-3)',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <span>
+                          <strong>{item.exercises?.name}</strong>
+                          <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>
+                            {' '}
+                            · {item.sets ?? '—'}x{item.reps ?? '—'} {item.weight_target ? `· ${item.weight_target}kg` : ''}
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeExercise(item.id)}
+                          style={{ background: 'none', border: 'none', color: 'var(--oc-danger)', cursor: 'pointer', fontSize: 13 }}
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
           )}
 
           <form onSubmit={addExercise} style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ width: 130 }}>
+              <Field label="Día">
+                <Select value={dayOfWeek} onChange={(e) => setDayOfWeek(e.target.value)}>
+                  <option value="">Sin día</option>
+                  {DAYS.map((d) => (
+                    <option key={d.value} value={d.value}>
+                      {d.label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
             <div style={{ flex: '1 1 180px' }}>
               <Field label="Ejercicio">
                 <Select value={exerciseId} onChange={(e) => setExerciseId(e.target.value)} required>
@@ -250,7 +306,7 @@ function NutritionSection({ studentId, trainerId }: { studentId: string; trainer
   if (loading) {
     return (
       <Card>
-        <h2 style={{ marginTop: 0 }}>Nutrición</h2>
+        <h2 style={{ marginTop: 0 }}>Dieta</h2>
         <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
       </Card>
     );
@@ -258,7 +314,7 @@ function NutritionSection({ studentId, trainerId }: { studentId: string; trainer
 
   return (
     <Card>
-      <h2 style={{ marginTop: 0 }}>Nutrición</h2>
+      <h2 style={{ marginTop: 0 }}>Dieta</h2>
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ width: 100 }}>
           <Field label="Calorías">
@@ -284,12 +340,21 @@ function NutritionSection({ studentId, trainerId }: { studentId: string; trainer
           {saving ? 'Guardando…' : plan ? 'Actualizar' : 'Crear plan'}
         </Button>
       </form>
+
+      <h3 style={{ marginTop: 'var(--oc-space-5)', marginBottom: 'var(--oc-space-3)', fontSize: 15 }}>
+        Dieta detallada
+      </h3>
+      <p style={{ color: 'var(--oc-text-muted)', fontSize: 13, marginTop: -8 }}>
+        Podés cargarla vos mismo, o la carga el alumno desde su cuenta — comparten la misma lista.
+      </p>
+      <DietBuilder studentId={studentId} />
     </Card>
   );
 }
 
 function PaymentsSection({ studentId }: { studentId: string }) {
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [receiptUrls, setReceiptUrls] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [amount, setAmount] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -303,7 +368,21 @@ function PaymentsSection({ studentId }: { studentId: string }) {
       .select('*')
       .eq('student_id', studentId)
       .order('period_start', { ascending: false });
-    setPayments(data ?? []);
+    const rows = data ?? [];
+    setPayments(rows);
+
+    const urls: Record<number, string> = {};
+    await Promise.all(
+      rows
+        .filter((p) => p.receipt_path)
+        .map(async (p) => {
+          const { data: signed } = await supabase.storage
+            .from(RECEIPTS_BUCKET)
+            .createSignedUrl(p.receipt_path as string, 60 * 60);
+          if (signed?.signedUrl) urls[p.id] = signed.signedUrl;
+        }),
+    );
+    setReceiptUrls(urls);
     setLoading(false);
   }
 
@@ -347,42 +426,35 @@ function PaymentsSection({ studentId }: { studentId: string }) {
             <div
               key={payment.id}
               style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
                 padding: 'var(--oc-space-2) var(--oc-space-3)',
-                border: '1px solid var(--oc-border)',
+                background: 'var(--oc-surface-gradient)',
+                boxShadow: 'var(--oc-shadow-raised-sm)',
                 borderRadius: 'var(--oc-radius-sm)',
-                gap: 'var(--oc-space-3)',
-                flexWrap: 'wrap',
               }}
             >
-              <span>
-                {payment.period_start} → {payment.period_end} · {payment.amount} {payment.currency}
-              </span>
-              <span
-                style={{
-                  color:
-                    payment.status === 'paid'
-                      ? 'var(--oc-success)'
-                      : payment.status === 'overdue'
-                        ? 'var(--oc-danger)'
-                        : 'var(--oc-text-muted)',
-                  fontSize: 13,
-                }}
-              >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--oc-space-3)', flexWrap: 'wrap' }}>
+                <span>
+                  {payment.period_start} → {payment.period_end} · {payment.amount} {payment.currency}
+                </span>
+                {receiptUrls[payment.id] && (
+                  <a href={receiptUrls[payment.id]} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
+                    Ver comprobante
+                  </a>
+                )}
+              </div>
+              <div style={{ marginTop: 'var(--oc-space-2)' }}>
                 {payment.status === 'pending' ? (
                   <button
                     type="button"
                     onClick={() => markPaid(payment.id)}
-                    style={{ background: 'none', border: 'none', color: 'var(--oc-energy)', cursor: 'pointer', fontSize: 13 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--oc-energy)', cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: 0 }}
                   >
                     Marcar pagado
                   </button>
                 ) : (
-                  payment.status
+                  <StatusPill status={payment.status} />
                 )}
-              </span>
+              </div>
             </div>
           ))}
         </div>

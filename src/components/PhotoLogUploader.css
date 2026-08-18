@@ -1,0 +1,60 @@
+.oc-photo-upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-radius: var(--oc-radius-sm);
+  background: var(--oc-surface-gradient);
+  box-shadow: var(--oc-shadow-raised-sm);
+  color: var(--oc-energy);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.oc-photo-upload:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--oc-shadow-raised);
+}
+
+.oc-photo-upload:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.oc-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--oc-space-3);
+}
+
+.oc-photo-thumb {
+  margin: 0;
+  border-radius: var(--oc-radius-sm);
+  overflow: hidden;
+  background: var(--oc-surface-gradient);
+  box-shadow: var(--oc-shadow-raised-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.oc-photo-thumb:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--oc-shadow-raised);
+}
+
+.oc-photo-thumb img,
+.oc-photo-thumb__fallback {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+  background: var(--oc-slate);
+}
+
+.oc-photo-thumb figcaption {
+  padding: var(--oc-space-2);
+  font-size: 12px;
+  color: var(--oc-text-muted);
+  text-align: center;
+}
