@@ -748,6 +748,42 @@ insert into public.foods (name, calories_per_100g, protein_per_100g, carbs_per_1
 on conflict (name) do nothing;
 
 -- =========================================================================
+-- 11. BORRAR ALUMNO (solo el entrenador puede sacarse alumnos de encima)
+-- Borra todos los datos del alumno (rutinas, historial, medidas, fotos,
+-- dieta, pagos) y por último la cuenta de auth.users, que arrastra por
+-- cascade la fila de profiles.
+-- =========================================================================
+
+create or replace function public.delete_student(target_student_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not (select private.is_trainer_of(target_student_id)) then
+    raise exception 'not authorized';
+  end if;
+
+  delete from public.diet_entries where student_id = target_student_id;
+  delete from public.payments where student_id = target_student_id;
+  delete from public.nutrition_plans where student_id = target_student_id;
+  delete from public.meal_photos where student_id = target_student_id;
+  delete from public.progress_photos where student_id = target_student_id;
+  delete from public.body_measurements where student_id = target_student_id;
+  delete from public.workout_logs where student_id = target_student_id;
+  delete from public.routines where student_id = target_student_id;
+  update public.exercises set created_by = null where created_by = target_student_id;
+  update public.foods set created_by = null where created_by = target_student_id;
+
+  delete from auth.users where id = target_student_id;
+end;
+$$;
+
+revoke execute on function public.delete_student(uuid) from public, anon;
+grant execute on function public.delete_student(uuid) to authenticated;
+
+-- =========================================================================
 -- Cómo usar este script
 -- =========================================================================
 -- 1. Dashboard de Supabase -> tu proyecto -> SQL Editor -> pegar todo este

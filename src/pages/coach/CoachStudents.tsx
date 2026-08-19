@@ -30,6 +30,7 @@ export function CoachStudents() {
   const [students, setStudents] = useState<Profile[]>([]);
   const [alerts, setAlerts] = useState<Record<string, StudentAlerts>>({});
   const [loading, setLoading] = useState(true);
+  const [removing, setRemoving] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -86,6 +87,22 @@ export function CoachStudents() {
     setLoading(false);
   }
 
+  async function removeStudent(student: Profile) {
+    const confirmed = window.confirm(
+      `¿Seguro que querés sacar a ${student.full_name || student.email} de tus alumnos? Se borra toda su rutina, historial, medidas, fotos, dieta y pagos. Esto no se puede deshacer.`,
+    );
+    if (!confirmed) return;
+
+    setRemoving(student.id);
+    const { error } = await supabase.rpc('delete_student', { target_student_id: student.id });
+    setRemoving(null);
+    if (error) {
+      window.alert(`No se pudo sacar al alumno: ${error.message}`);
+      return;
+    }
+    setStudents((prev) => prev.filter((s) => s.id !== student.id));
+  }
+
   return (
     <AppShell links={NAV}>
       <h1 style={{ color: 'var(--oc-gold)' }}>Alumnos</h1>
@@ -112,9 +129,27 @@ export function CoachStudents() {
                     <strong>{student.full_name || 'Sin nombre'}</strong>
                     <p style={{ margin: 0, fontSize: 12, color: 'var(--oc-text-muted)' }}>{student.email}</p>
                   </div>
-                  <Link to={`/coach/alumnos/${student.id}`} style={{ color: 'var(--oc-gold)', fontSize: 14, whiteSpace: 'nowrap' }}>
-                    Ver →
-                  </Link>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-3)' }}>
+                    <Link to={`/coach/alumnos/${student.id}`} style={{ color: 'var(--oc-gold)', fontSize: 14, whiteSpace: 'nowrap' }}>
+                      Ver →
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => removeStudent(student)}
+                      disabled={removing === student.id}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--oc-danger)',
+                        cursor: removing === student.id ? 'default' : 'pointer',
+                        fontSize: 13,
+                        opacity: removing === student.id ? 0.6 : 1,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {removing === student.id ? 'Sacando…' : 'Sacar alumno'}
+                    </button>
+                  </div>
                 </div>
 
                 {a && (a.paymentOverdue || !a.hasRoutine || isInactive) && (
