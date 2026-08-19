@@ -7,7 +7,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Field, Input } from '../../components/ui/Input';
 import { STUDENT_NAV } from './nav';
-import { youtubeSearchEmbedUrl } from '../../lib/youtube';
+import { youtubeSearchUrl } from '../../lib/youtube';
 import { WorkoutHistory } from '../../components/WorkoutHistory';
 import { dayLabel, groupByDay, muscleGroupSummary } from '../../lib/days';
 import type { Routine, RoutineExerciseWithName } from '../../lib/types';
@@ -19,7 +19,6 @@ export function StudentRoutine() {
   const [items, setItems] = useState<RoutineExerciseWithName[]>([]);
   const [loading, setLoading] = useState(true);
   const [logging, setLogging] = useState<number | null>(null);
-  const [videoFor, setVideoFor] = useState<number | null>(null);
   const [setsCompleted, setSetsCompleted] = useState('');
   const [weightUsed, setWeightUsed] = useState('');
   const [saving, setSaving] = useState(false);
@@ -131,23 +130,16 @@ export function StudentRoutine() {
                         <Button variant="secondary" onClick={() => setLogging(item.id)}>
                           Registrar serie
                         </Button>
-                        <Button
-                          variant="ghost"
-                          onClick={() => setVideoFor(videoFor === item.id ? null : item.id)}
-                        >
-                          {videoFor === item.id ? 'Ocultar video' : '▶ Ver cómo hacerlo'}
-                        </Button>
-                      </div>
-                    )}
-
-                    {videoFor === item.id && item.exercises?.name && (
-                      <div className="oc-video-frame">
-                        <iframe
-                          src={youtubeSearchEmbedUrl(item.exercises.name)}
-                          title={`Video: ${item.exercises.name}`}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
+                        {item.exercises?.name && (
+                          <a
+                            className="oc-button oc-button--ghost"
+                            href={youtubeSearchUrl(item.exercises.name)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            ▶ Ver cómo hacerlo
+                          </a>
+                        )}
                       </div>
                     )}
                   </Card>

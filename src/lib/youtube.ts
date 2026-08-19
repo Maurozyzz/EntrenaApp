@@ -1,8 +1,10 @@
 /**
- * Embed de resultados de búsqueda de YouTube (sin necesidad de guardar un video
- * puntual por ejercicio, que podría borrarse o quedar desactualizado).
+ * Enlace a resultados de búsqueda de YouTube (sin necesidad de guardar un video
+ * puntual por ejercicio, que podría borrarse o quedar desactualizado). YouTube
+ * discontinuó el embed de listas de búsqueda (listType=search), así que se abre
+ * en una pestaña nueva en lugar de incrustarse en un iframe.
  */
-export function youtubeSearchEmbedUrl(query: string): string {
+export function youtubeSearchUrl(query: string): string {
   const search = `${query} técnica ejercicio gimnasio`;
-  return `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(search)}`;
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(search)}`;
 }

@@ -6,7 +6,7 @@ import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Field, Input } from '../../components/ui/Input';
-import { youtubeSearchEmbedUrl } from '../../lib/youtube';
+import { youtubeSearchUrl } from '../../lib/youtube';
 import type { Exercise } from '../../lib/types';
 import '../student/StudentRoutine.css';
 
@@ -23,7 +23,6 @@ export function CoachExercises() {
   const [muscleGroup, setMuscleGroup] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [videoFor, setVideoFor] = useState<number | null>(null);
   const [search, setSearch] = useState('');
 
   async function loadExercises() {
@@ -119,24 +118,15 @@ export function CoachExercises() {
                     <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}> · {exercise.muscle_group}</span>
                   )}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setVideoFor(videoFor === exercise.id ? null : exercise.id)}
-                  style={{ background: 'none', border: 'none', color: 'var(--oc-gold)', cursor: 'pointer', fontSize: 13 }}
+                <a
+                  href={youtubeSearchUrl(exercise.name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--oc-gold)', fontSize: 13 }}
                 >
-                  {videoFor === exercise.id ? 'Ocultar video' : '▶ Ver video'}
-                </button>
+                  ▶ Ver video
+                </a>
               </div>
-              {videoFor === exercise.id && (
-                <div className="oc-video-frame">
-                  <iframe
-                    src={youtubeSearchEmbedUrl(exercise.name)}
-                    title={`Video: ${exercise.name}`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              )}
             </Card>
           ))}
         </div>
