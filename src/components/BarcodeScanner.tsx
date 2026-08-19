@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import type { IScannerControls } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
+import { useLanguage } from '../lib/i18n';
 import { Button } from './ui/Button';
 import './BarcodeScanner.css';
 
@@ -25,6 +26,7 @@ hints.set(DecodeHintType.POSSIBLE_FORMATS, [
 hints.set(DecodeHintType.TRY_HARDER, true);
 
 export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
+  const { t } = useLanguage();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +52,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
         },
       )
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'No se pudo acceder a la cámara.');
+        setError(err instanceof Error ? err.message : t('scanner.genericError'));
       });
 
     return () => {
@@ -69,12 +71,12 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
           <>
             <video ref={videoRef} className="oc-scanner-video" muted playsInline />
             <p style={{ color: 'var(--oc-text-muted)', fontSize: 13, marginTop: 'var(--oc-space-3)' }}>
-              Apuntá al código de barras del producto
+              {t('scanner.aim')}
             </p>
           </>
         )}
         <Button variant="ghost" onClick={onClose} style={{ marginTop: 'var(--oc-space-3)' }}>
-          Cancelar
+          {t('common.cancel')}
         </Button>
       </div>
     </div>

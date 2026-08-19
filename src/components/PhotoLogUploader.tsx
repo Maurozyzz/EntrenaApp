@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { useLanguage } from '../lib/i18n';
 import { Card } from './ui/Card';
 import type { PhotoLog } from '../lib/types';
 import './PhotoLogUploader.css';
@@ -19,6 +20,7 @@ interface PhotoLogUploaderProps {
 }
 
 export function PhotoLogUploader({ bucket, table, studentId, uploadLabel, emptyLabel, onUploaded }: PhotoLogUploaderProps) {
+  const { t } = useLanguage();
   const [photos, setPhotos] = useState<PhotoWithUrl[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -77,13 +79,13 @@ export function PhotoLogUploader({ bucket, table, studentId, uploadLabel, emptyL
       <Card style={{ marginBottom: 'var(--oc-space-4)' }}>
         <label className="oc-photo-upload">
           <input type="file" accept="image/*" onChange={handleSelected} disabled={uploading} hidden />
-          <span>{uploading ? 'Subiendo…' : uploadLabel}</span>
+          <span>{uploading ? t('common.uploading') : uploadLabel}</span>
         </label>
         {error && <p style={{ color: 'var(--oc-danger)', fontSize: 13, marginTop: 'var(--oc-space-2)' }}>{error}</p>}
       </Card>
 
       {loading ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>
       ) : photos.length === 0 ? (
         <p style={{ color: 'var(--oc-text-muted)' }}>{emptyLabel}</p>
       ) : (

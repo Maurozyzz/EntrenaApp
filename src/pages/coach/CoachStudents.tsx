@@ -3,14 +3,11 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
+import { useLanguage } from '../../lib/i18n';
 import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
+import { COACH_NAV } from './nav';
 import type { Profile } from '../../lib/types';
-
-const NAV = [
-  { to: '/coach', label: 'Alumnos' },
-  { to: '/coach/ejercicios', label: 'Ejercicios' },
-];
 
 const INACTIVE_DAYS_THRESHOLD = 7;
 
@@ -27,6 +24,7 @@ function daysSince(dateStr: string): number {
 
 export function CoachStudents() {
   const { profile } = useAuth();
+  const { t } = useLanguage();
   const [students, setStudents] = useState<Profile[]>([]);
   const [alerts, setAlerts] = useState<Record<string, StudentAlerts>>({});
   const [loading, setLoading] = useState(true);
@@ -89,7 +87,7 @@ export function CoachStudents() {
 
   async function removeStudent(student: Profile) {
     const confirmed = window.confirm(
-      `¿Seguro que querés sacar a ${student.full_name || student.email} de tus alumnos? Se borra toda su rutina, historial, medidas, fotos, dieta y pagos. Esto no se puede deshacer.`,
+      t('coachStudents.confirmRemove', { name: student.full_name || student.email || '' }),
     );
     if (!confirmed) return;
 
@@ -97,24 +95,21 @@ export function CoachStudents() {
     const { error } = await supabase.rpc('delete_student', { target_student_id: student.id });
     setRemoving(null);
     if (error) {
-      window.alert(`No se pudo sacar al alumno: ${error.message}`);
+      window.alert(t('coachStudents.removeFailed', { message: error.message }));
       return;
     }
     setStudents((prev) => prev.filter((s) => s.id !== student.id));
   }
 
   return (
-    <AppShell links={NAV}>
-      <h1 style={{ color: 'var(--oc-gold)' }}>Alumnos</h1>
-      <p style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>
-        Para sumar un alumno nuevo, pedile que se registre desde la pantalla de login con su propio email — queda
-        vinculado a vos automáticamente.
-      </p>
+    <AppShell links={COACH_NAV}>
+      <h1 style={{ color: 'var(--oc-gold)' }}>{t('coachStudents.title')}</h1>
+      <p style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>{t('coachStudents.howToAdd')}</p>
 
       {loading ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>
       ) : students.length === 0 ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Todavía no tenés alumnos registrados.</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('coachStudents.noStudents')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)', marginTop: 'var(--oc-space-4)' }}>
           {students.map((student) => {
@@ -126,12 +121,12 @@ export function CoachStudents() {
               <Card key={student.id}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--oc-space-3)', flexWrap: 'wrap' }}>
                   <div>
-                    <strong>{student.full_name || 'Sin nombre'}</strong>
+                    <strong>{student.full_name || t('coachStudents.noName')}</strong>
                     <p style={{ margin: 0, fontSize: 12, color: 'var(--oc-text-muted)' }}>{student.email}</p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-3)' }}>
                     <Link to={`/coach/alumnos/${student.id}`} style={{ color: 'var(--oc-gold)', fontSize: 14, whiteSpace: 'nowrap' }}>
-                      Ver →
+                      {t('coachStudents.view')}
                     </Link>
                     <button
                       type="button"
@@ -147,18 +142,20 @@ export function CoachStudents() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {removing === student.id ? 'Sacando…' : 'Sacar alumno'}
+                      {removing === student.id ? t('coachStudents.removing') : t('coachStudents.remove')}
                     </button>
                   </div>
                 </div>
 
                 {a && (a.paymentOverdue || !a.hasRoutine || isInactive) && (
                   <div style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', marginTop: 'var(--oc-space-3)' }}>
-                    {a.paymentOverdue && <AlertBadge tone="danger">Pago vencido</AlertBadge>}
-                    {!a.hasRoutine && <AlertBadge tone="muted">Sin rutina</AlertBadge>}
+                    {a.paymentOverdue && <AlertBadge tone="danger">{t('coachStudents.overdueBadge')}</AlertBadge>}
+                    {!a.hasRoutine && <AlertBadge tone="muted">{t('coachStudents.noRoutineBadge')}</AlertBadge>}
                     {isInactive && (
                       <AlertBadge tone="warning">
-                        {inactiveDays === null ? 'Nunca registró una serie' : `Inactivo hace ${inactiveDays} días`}
+                        {inactiveDays === null
+                          ? t('coachStudents.neverLogged')
+                          : t('coachStudents.inactiveDays', { days: inactiveDays })}
                       </AlertBadge>
                     )}
                   </div>

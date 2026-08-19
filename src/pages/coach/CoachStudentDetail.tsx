@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
+import { useLanguage } from '../../lib/i18n';
 import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -10,6 +11,7 @@ import { Field, Input, Select } from '../../components/ui/Input';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { DietBuilder } from '../../components/DietBuilder';
 import { WorkoutHistory } from '../../components/WorkoutHistory';
+import { COACH_NAV } from './nav';
 import { DAYS, dayLabel, groupByDay, muscleGroupSummary } from '../../lib/days';
 import type {
   Exercise,
@@ -20,16 +22,12 @@ import type {
   RoutineExerciseWithName,
 } from '../../lib/types';
 
-const NAV = [
-  { to: '/coach', label: 'Alumnos' },
-  { to: '/coach/ejercicios', label: 'Ejercicios' },
-];
-
 const RECEIPTS_BUCKET = 'payment-receipts';
 
 export function CoachStudentDetail() {
   const { id: studentId } = useParams<{ id: string }>();
   const { profile } = useAuth();
+  const { t } = useLanguage();
   const [student, setStudent] = useState<Profile | null>(null);
 
   useEffect(() => {
@@ -40,13 +38,13 @@ export function CoachStudentDetail() {
   if (!studentId || !profile) return null;
 
   return (
-    <AppShell links={NAV}>
-      <h1 style={{ color: 'var(--oc-gold)' }}>{student?.full_name || student?.email || 'Alumno'}</h1>
+    <AppShell links={COACH_NAV}>
+      <h1 style={{ color: 'var(--oc-gold)' }}>{student?.full_name || student?.email || t('coachStudentDetail.fallbackName')}</h1>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-5)', marginTop: 'var(--oc-space-4)' }}>
         <RoutineSection studentId={studentId} trainerId={profile.id} />
         <Card>
-          <h2 style={{ marginTop: 0 }}>Historial de entrenamientos</h2>
+          <h2 style={{ marginTop: 0 }}>{t('coachStudentDetail.workoutHistoryTitle')}</h2>
           <WorkoutHistory studentId={studentId} />
         </Card>
         <NutritionSection studentId={studentId} trainerId={profile.id} />
@@ -57,6 +55,7 @@ export function CoachStudentDetail() {
 }
 
 function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId: string }) {
+  const { t } = useLanguage();
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [items, setItems] = useState<RoutineExerciseWithName[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -140,25 +139,25 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
 
   return (
     <Card>
-      <h2 style={{ marginTop: 0 }}>Rutina</h2>
+      <h2 style={{ marginTop: 0 }}>{t('coachStudentDetail.routineTitle')}</h2>
       {error && <p style={{ color: 'var(--oc-danger)', fontSize: 13 }}>{error}</p>}
       {loading ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>
       ) : !routine ? (
         <div>
-          <p style={{ color: 'var(--oc-text-muted)' }}>Este alumno todavía no tiene una rutina activa.</p>
-          <Button onClick={createRoutine}>Crear rutina</Button>
+          <p style={{ color: 'var(--oc-text-muted)' }}>{t('coachStudentDetail.noActiveRoutine')}</p>
+          <Button onClick={createRoutine}>{t('coachStudentDetail.createRoutine')}</Button>
         </div>
       ) : (
         <>
           {items.length === 0 ? (
-            <p style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>Todavía no agregaste ejercicios.</p>
+            <p style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>{t('coachStudentDetail.noExercisesYet')}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-4)', marginBottom: 'var(--oc-space-4)' }}>
               {groupByDay(items).map(({ day, items: dayItems }) => (
                 <div key={day ?? 'none'}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--oc-gold)', marginBottom: 'var(--oc-space-2)' }}>
-                    {dayLabel(day)}
+                    {dayLabel(day, t)}
                     {muscleGroupSummary(dayItems) && (
                       <span style={{ color: 'var(--oc-text-muted)', fontWeight: 400 }}> · {muscleGroupSummary(dayItems)}</span>
                     )}
@@ -183,7 +182,8 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
                           <strong>{item.exercises?.name}</strong>
                           <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>
                             {' '}
-                            · {item.sets ?? '—'}x{item.reps ?? '—'} {item.weight_target ? `· ${item.weight_target}kg` : ''}
+                            {t('coachStudentDetail.setsRepsLine', { sets: item.sets ?? '—', reps: item.reps ?? '—' })}
+                            {item.weight_target ? ` ${t('coachStudentDetail.weightSuffix', { weight: item.weight_target })}` : ''}
                           </span>
                         </span>
                         <button
@@ -191,7 +191,7 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
                           onClick={() => removeExercise(item.id)}
                           style={{ background: 'none', border: 'none', color: 'var(--oc-danger)', cursor: 'pointer', fontSize: 13 }}
                         >
-                          Quitar
+                          {t('coachStudentDetail.remove')}
                         </button>
                       </div>
                     ))}
@@ -203,21 +203,21 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
 
           <form onSubmit={addExercise} style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ width: 130 }}>
-              <Field label="Día">
+              <Field label={t('coachStudentDetail.day')}>
                 <Select value={dayOfWeek} onChange={(e) => setDayOfWeek(e.target.value)}>
-                  <option value="">Sin día</option>
+                  <option value="">{t('day.noneOption')}</option>
                   {DAYS.map((d) => (
                     <option key={d.value} value={d.value}>
-                      {d.label}
+                      {t(d.key)}
                     </option>
                   ))}
                 </Select>
               </Field>
             </div>
             <div style={{ flex: '1 1 180px' }}>
-              <Field label="Ejercicio">
+              <Field label={t('coachStudentDetail.exercise')}>
                 <Select value={exerciseId} onChange={(e) => setExerciseId(e.target.value)} required>
-                  <option value="">Elegir…</option>
+                  <option value="">{t('coachStudentDetail.choose')}</option>
                   {exercises.map((ex) => (
                     <option key={ex.id} value={ex.id}>
                       {ex.name}
@@ -227,21 +227,21 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
               </Field>
             </div>
             <div style={{ width: 70 }}>
-              <Field label="Series">
+              <Field label={t('coachStudentDetail.sets')}>
                 <Input value={sets} onChange={(e) => setSets(e.target.value)} inputMode="numeric" />
               </Field>
             </div>
             <div style={{ width: 90 }}>
-              <Field label="Reps">
+              <Field label={t('coachStudentDetail.reps')}>
                 <Input value={reps} onChange={(e) => setReps(e.target.value)} placeholder="8-12" />
               </Field>
             </div>
             <div style={{ width: 90 }}>
-              <Field label="Peso (kg)">
+              <Field label={t('coachStudentDetail.weightKg')}>
                 <Input value={weightTarget} onChange={(e) => setWeightTarget(e.target.value)} inputMode="decimal" />
               </Field>
             </div>
-            <Button type="submit">Agregar</Button>
+            <Button type="submit">{t('common.add')}</Button>
           </form>
         </>
       )}
@@ -250,6 +250,7 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
 }
 
 function NutritionSection({ studentId, trainerId }: { studentId: string; trainerId: string }) {
+  const { t } = useLanguage();
   const [plan, setPlan] = useState<NutritionPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [calories, setCalories] = useState('');
@@ -306,46 +307,46 @@ function NutritionSection({ studentId, trainerId }: { studentId: string; trainer
   if (loading) {
     return (
       <Card>
-        <h2 style={{ marginTop: 0 }}>Dieta</h2>
-        <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
+        <h2 style={{ marginTop: 0 }}>{t('coachStudentDetail.dietTitle')}</h2>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>
       </Card>
     );
   }
 
   return (
     <Card>
-      <h2 style={{ marginTop: 0 }}>Dieta</h2>
+      <h2 style={{ marginTop: 0 }}>{t('coachStudentDetail.dietTitle')}</h2>
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ width: 100 }}>
-          <Field label="Calorías">
+          <Field label={t('coachStudentDetail.caloriesLabel')}>
             <Input value={calories} onChange={(e) => setCalories(e.target.value)} inputMode="numeric" />
           </Field>
         </div>
         <div style={{ width: 90 }}>
-          <Field label="Proteína (g)">
+          <Field label={t('coachStudentDetail.proteinG')}>
             <Input value={protein} onChange={(e) => setProtein(e.target.value)} inputMode="numeric" />
           </Field>
         </div>
         <div style={{ width: 90 }}>
-          <Field label="Carbs (g)">
+          <Field label={t('coachStudentDetail.carbsG')}>
             <Input value={carbs} onChange={(e) => setCarbs(e.target.value)} inputMode="numeric" />
           </Field>
         </div>
         <div style={{ width: 90 }}>
-          <Field label="Grasas (g)">
+          <Field label={t('coachStudentDetail.fatG')}>
             <Input value={fat} onChange={(e) => setFat(e.target.value)} inputMode="numeric" />
           </Field>
         </div>
         <Button type="submit" disabled={saving}>
-          {saving ? 'Guardando…' : plan ? 'Actualizar' : 'Crear plan'}
+          {saving ? t('common.saving') : plan ? t('coachStudentDetail.update') : t('coachStudentDetail.createPlan')}
         </Button>
       </form>
 
       <h3 style={{ marginTop: 'var(--oc-space-5)', marginBottom: 'var(--oc-space-3)', fontSize: 15 }}>
-        Dieta detallada
+        {t('coachStudentDetail.detailedDietTitle')}
       </h3>
       <p style={{ color: 'var(--oc-text-muted)', fontSize: 13, marginTop: -8 }}>
-        Podés cargarla vos mismo, o la carga el alumno desde su cuenta — comparten la misma lista.
+        {t('coachStudentDetail.detailedDietHint')}
       </p>
       <DietBuilder studentId={studentId} />
     </Card>
@@ -353,6 +354,7 @@ function NutritionSection({ studentId, trainerId }: { studentId: string; trainer
 }
 
 function PaymentsSection({ studentId }: { studentId: string }) {
+  const { t } = useLanguage();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
@@ -414,12 +416,12 @@ function PaymentsSection({ studentId }: { studentId: string }) {
 
   return (
     <Card>
-      <h2 style={{ marginTop: 0 }}>Pagos</h2>
+      <h2 style={{ marginTop: 0 }}>{t('coachStudentDetail.paymentsTitle')}</h2>
 
       {loading ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>
       ) : payments.length === 0 ? (
-        <p style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>Todavía no hay pagos cargados.</p>
+        <p style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>{t('coachStudentDetail.noPayments')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-2)', marginBottom: 'var(--oc-space-4)' }}>
           {payments.map((payment) => (
@@ -434,11 +436,16 @@ function PaymentsSection({ studentId }: { studentId: string }) {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--oc-space-3)', flexWrap: 'wrap' }}>
                 <span>
-                  {payment.period_start} → {payment.period_end} · {payment.amount} {payment.currency}
+                  {t('coachStudentDetail.rangeLine', {
+                    start: payment.period_start,
+                    end: payment.period_end,
+                    amount: payment.amount,
+                    currency: payment.currency,
+                  })}
                 </span>
                 {receiptUrls[payment.id] && (
                   <a href={receiptUrls[payment.id]} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
-                    Ver comprobante
+                    {t('coachStudentDetail.viewReceipt')}
                   </a>
                 )}
               </div>
@@ -449,7 +456,7 @@ function PaymentsSection({ studentId }: { studentId: string }) {
                     onClick={() => markPaid(payment.id)}
                     style={{ background: 'none', border: 'none', color: 'var(--oc-energy)', cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: 0 }}
                   >
-                    Marcar pagado
+                    {t('coachStudentDetail.markPaid')}
                   </button>
                 ) : (
                   <StatusPill status={payment.status} />
@@ -462,22 +469,22 @@ function PaymentsSection({ studentId }: { studentId: string }) {
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ width: 100 }}>
-          <Field label="Monto">
+          <Field label={t('coachStudentDetail.amount')}>
             <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" required />
           </Field>
         </div>
         <div>
-          <Field label="Desde">
+          <Field label={t('coachStudentDetail.from')}>
             <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} required />
           </Field>
         </div>
         <div>
-          <Field label="Hasta">
+          <Field label={t('coachStudentDetail.to')}>
             <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} required />
           </Field>
         </div>
         <Button type="submit" disabled={saving}>
-          {saving ? 'Guardando…' : 'Registrar pago'}
+          {saving ? t('common.saving') : t('coachStudentDetail.registerPayment')}
         </Button>
       </form>
     </Card>

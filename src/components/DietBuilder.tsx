@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { useLanguage } from '../lib/i18n';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
 import { Field, Input, Select } from './ui/Input';
@@ -26,6 +27,7 @@ function groupByMeal(entries: DietEntryWithFood[]): MealGroup[] {
 }
 
 export function DietBuilder({ studentId }: { studentId: string }) {
+  const { t } = useLanguage();
   const [foods, setFoods] = useState<Food[]>([]);
   const [entries, setEntries] = useState<DietEntryWithFood[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,7 +150,7 @@ export function DietBuilder({ studentId }: { studentId: string }) {
         setFoods((prev) => (prev.some((f) => f.id === retryExisting.id) ? prev : [...prev, retryExisting]));
         setFoodId(String(retryExisting.id));
       } else {
-        setScanError(insertErr?.message ?? 'No se pudo guardar el producto escaneado.');
+        setScanError(insertErr?.message ?? t('dietBuilder.scanSaveFailed'));
       }
       setScanBusy(false);
       return;
@@ -195,7 +197,7 @@ export function DietBuilder({ studentId }: { studentId: string }) {
         setFoodId(String(retryExisting.id));
         cancelManualEntry();
       } else {
-        setScanError(insertErr?.message ?? 'No se pudo guardar el producto.');
+        setScanError(insertErr?.message ?? t('dietBuilder.manualSaveFailed'));
       }
       setManualSaving(false);
       return;
@@ -212,24 +214,22 @@ export function DietBuilder({ studentId }: { studentId: string }) {
       {entries.length > 0 && (
         <Card style={{ marginBottom: 'var(--oc-space-4)' }}>
           <div style={{ fontSize: 13, color: 'var(--oc-text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 'var(--oc-space-3)' }}>
-            Total cargado
+            {t('dietBuilder.total')}
           </div>
           <div style={{ display: 'flex', gap: 'var(--oc-space-5)', flexWrap: 'wrap' }}>
-            <TotalStat label="Calorías" value={round(totals.calories)} />
-            <TotalStat label="Proteína" value={round(totals.protein)} unit="g" />
-            <TotalStat label="Carbohidratos" value={round(totals.carbs)} unit="g" />
-            <TotalStat label="Grasas" value={round(totals.fat)} unit="g" />
+            <TotalStat label={t('dietBuilder.calories')} value={round(totals.calories)} />
+            <TotalStat label={t('dietBuilder.protein')} value={round(totals.protein)} unit="g" />
+            <TotalStat label={t('dietBuilder.carbs')} value={round(totals.carbs)} unit="g" />
+            <TotalStat label={t('dietBuilder.fat')} value={round(totals.fat)} unit="g" />
           </div>
         </Card>
       )}
 
       <Card style={{ marginBottom: 'var(--oc-space-4)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--oc-space-3)', flexWrap: 'wrap', gap: 'var(--oc-space-2)' }}>
-          <span style={{ fontSize: 13, color: 'var(--oc-text-muted)' }}>
-            ¿No está en la lista? Escaneá el código de barras del producto.
-          </span>
+          <span style={{ fontSize: 13, color: 'var(--oc-text-muted)' }}>{t('dietBuilder.notInList')}</span>
           <Button type="button" variant="secondary" onClick={() => setScanning(true)} disabled={scanBusy}>
-            {scanBusy ? 'Buscando…' : '📷 Escanear código de barras'}
+            {scanBusy ? t('dietBuilder.searching') : t('dietBuilder.scanButton')}
           </Button>
         </div>
         {scanError && <p style={{ color: 'var(--oc-danger)', fontSize: 13, marginBottom: 'var(--oc-space-2)' }}>{scanError}</p>}
@@ -249,40 +249,39 @@ export function DietBuilder({ studentId }: { studentId: string }) {
             }}
           >
             <p style={{ margin: 0, fontSize: 13, color: 'var(--oc-text-muted)' }}>
-              No encontramos ese producto (código {manualBarcode}). Cargalo con los datos de la etiqueta y lo vamos
-              a reconocer solo la próxima vez que se escanee este mismo código.
+              {t('dietBuilder.notFound', { barcode: manualBarcode })}
             </p>
             <div style={{ display: 'flex', gap: 'var(--oc-space-3)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ flex: '1 1 200px' }}>
-                <Field label="Nombre del producto">
+                <Field label={t('dietBuilder.productName')}>
                   <Input value={manualName} onChange={(e) => setManualName(e.target.value)} required />
                 </Field>
               </div>
               <div style={{ width: 100 }}>
-                <Field label="Kcal /100g">
+                <Field label={t('dietBuilder.kcalPer100')}>
                   <Input value={manualCalories} onChange={(e) => setManualCalories(e.target.value)} inputMode="decimal" required />
                 </Field>
               </div>
               <div style={{ width: 100 }}>
-                <Field label="Proteína /100g">
+                <Field label={t('dietBuilder.proteinPer100')}>
                   <Input value={manualProtein} onChange={(e) => setManualProtein(e.target.value)} inputMode="decimal" />
                 </Field>
               </div>
               <div style={{ width: 100 }}>
-                <Field label="Carbos /100g">
+                <Field label={t('dietBuilder.carbsPer100')}>
                   <Input value={manualCarbs} onChange={(e) => setManualCarbs(e.target.value)} inputMode="decimal" />
                 </Field>
               </div>
               <div style={{ width: 100 }}>
-                <Field label="Grasas /100g">
+                <Field label={t('dietBuilder.fatPer100')}>
                   <Input value={manualFat} onChange={(e) => setManualFat(e.target.value)} inputMode="decimal" />
                 </Field>
               </div>
               <Button type="submit" disabled={manualSaving}>
-                {manualSaving ? 'Guardando…' : 'Guardar producto'}
+                {manualSaving ? t('common.saving') : t('dietBuilder.saveProduct')}
               </Button>
               <Button type="button" variant="ghost" onClick={cancelManualEntry} disabled={manualSaving}>
-                Cancelar
+                {t('common.cancel')}
               </Button>
             </div>
           </form>
@@ -290,9 +289,9 @@ export function DietBuilder({ studentId }: { studentId: string }) {
 
         <form onSubmit={handleAdd} style={{ display: 'flex', gap: 'var(--oc-space-3)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ flex: '1 1 200px' }}>
-            <Field label="Alimento">
+            <Field label={t('dietBuilder.food')}>
               <Select value={foodId} onChange={(e) => setFoodId(e.target.value)} required>
-                <option value="">Elegir…</option>
+                <option value="">{t('dietBuilder.choose')}</option>
                 {foods.map((food) => (
                   <option key={food.id} value={food.id}>
                     {food.name}
@@ -302,12 +301,12 @@ export function DietBuilder({ studentId }: { studentId: string }) {
             </Field>
           </div>
           <div style={{ width: 90 }}>
-            <Field label="Cantidad">
+            <Field label={t('dietBuilder.quantity')}>
               <Input value={quantity} onChange={(e) => setQuantity(e.target.value)} inputMode="decimal" required />
             </Field>
           </div>
           <div style={{ width: 80 }}>
-            <Field label="Unidad">
+            <Field label={t('dietBuilder.unit')}>
               <Select value={quantityUnit} onChange={(e) => setQuantityUnit(e.target.value as QuantityUnit)}>
                 <option value="g">g</option>
                 <option value="ml">ml</option>
@@ -315,35 +314,38 @@ export function DietBuilder({ studentId }: { studentId: string }) {
             </Field>
           </div>
           <div style={{ width: 150 }}>
-            <Field label="Comida">
+            <Field label={t('dietBuilder.meal')}>
               <Input
                 value={mealLabel}
                 onChange={(e) => setMealLabel(e.target.value)}
-                placeholder="Desayuno, Comida 1…"
+                placeholder={t('dietBuilder.mealPlaceholder')}
               />
             </Field>
           </div>
           <Button type="submit" disabled={saving}>
-            {saving ? 'Agregando…' : 'Agregar'}
+            {saving ? t('common.saving') : t('common.add')}
           </Button>
         </form>
         <p style={{ color: 'var(--oc-text-muted)', fontSize: 12, marginTop: 'var(--oc-space-2)', marginBottom: 0 }}>
-          Usá el mismo nombre de "Comida" para juntar varios alimentos en un mismo renglón (ej: "Comida 1" para
-          pollo + arroz + palta).
+          {t('dietBuilder.mealHint')}
         </p>
 
         {selectedFood && Number(quantity) > 0 && (
           <p style={{ color: 'var(--oc-energy)', fontSize: 13, marginTop: 'var(--oc-space-3)', marginBottom: 0 }}>
-            {round(preview.calories)} kcal · {round(preview.protein)}g prot · {round(preview.carbs)}g carb ·{' '}
-            {round(preview.fat)}g grasa
+            {t('dietBuilder.previewLine', {
+              kcal: round(preview.calories),
+              protein: round(preview.protein),
+              carbs: round(preview.carbs),
+              fat: round(preview.fat),
+            })}
           </p>
         )}
       </Card>
 
       {loading ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>
       ) : mealGroups.length === 0 ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Todavía no cargaste tu dieta.</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('dietBuilder.noDiet')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
           {mealGroups.map((group) => {
@@ -359,7 +361,7 @@ export function DietBuilder({ studentId }: { studentId: string }) {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 'var(--oc-space-2)' }}>
-                  <strong style={{ fontSize: 13, color: 'var(--oc-gold)' }}>{group.label ?? 'Sin comida asignada'}</strong>
+                  <strong style={{ fontSize: 13, color: 'var(--oc-gold)' }}>{group.label ?? t('dietBuilder.noMealAssigned')}</strong>
                   <span style={{ fontSize: 12, color: 'var(--oc-text-muted)' }}>{round(groupTotals.calories)} kcal</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 'var(--oc-space-2)' }}>
@@ -368,11 +370,14 @@ export function DietBuilder({ studentId }: { studentId: string }) {
                     return (
                       <div key={entry.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--oc-space-2)', fontSize: 13 }}>
                         <span>
-                          <strong>{entry.foods?.name ?? 'Alimento'}</strong>
+                          <strong>{entry.foods?.name ?? t('dietBuilder.foodFallback')}</strong>
                           <span style={{ color: 'var(--oc-text-muted)' }}>
                             {' '}
-                            · {entry.quantity_g}
-                            {entry.quantity_unit} · {round(macros.calories)} kcal
+                            {t('dietBuilder.entryLine', {
+                              qty: entry.quantity_g,
+                              unit: entry.quantity_unit,
+                              kcal: round(macros.calories),
+                            })}
                           </span>
                         </span>
                         <button
@@ -380,7 +385,7 @@ export function DietBuilder({ studentId }: { studentId: string }) {
                           onClick={() => handleRemove(entry.id)}
                           style={{ background: 'none', border: 'none', color: 'var(--oc-danger)', cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap' }}
                         >
-                          Quitar
+                          {t('dietBuilder.remove')}
                         </button>
                       </div>
                     );
@@ -396,7 +401,7 @@ export function DietBuilder({ studentId }: { studentId: string }) {
         <Suspense
           fallback={
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(9,13,16,0.9)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--oc-text-muted)' }}>
-              Cargando cámara…
+              {t('dietBuilder.loadingCamera')}
             </div>
           }
         >

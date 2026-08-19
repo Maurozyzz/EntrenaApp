@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
+import { useLanguage } from '../../lib/i18n';
 import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
 import { STUDENT_NAV } from './nav';
@@ -9,6 +10,7 @@ import type { Payment, Routine } from '../../lib/types';
 
 export function StudentHome() {
   const { profile } = useAuth();
+  const { t } = useLanguage();
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [nextPayment, setNextPayment] = useState<Payment | null>(null);
 
@@ -36,28 +38,34 @@ export function StudentHome() {
 
   return (
     <AppShell links={STUDENT_NAV}>
-      <h1 style={{ color: 'var(--oc-gold)' }}>Hola{profile?.full_name ? `, ${profile.full_name}` : ''}</h1>
+      <h1 style={{ color: 'var(--oc-gold)' }}>
+        {t('studentHome.greeting', { name: profile?.full_name ? `, ${profile.full_name}` : '' })}
+      </h1>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)', marginTop: 'var(--oc-space-4)' }}>
         <Card>
-          <strong>Rutina activa</strong>
+          <strong>{t('studentHome.activeRoutine')}</strong>
           <p style={{ color: 'var(--oc-text-muted)', marginTop: 'var(--oc-space-2)' }}>
-            {routine ? routine.name : 'Todavía no tenés una rutina asignada.'}
+            {routine ? routine.name : t('studentHome.noRoutine')}
           </p>
           <Link to="/mi/rutina" style={{ color: 'var(--oc-gold)', fontSize: 14 }}>
-            Ver rutina →
+            {t('studentHome.viewRoutine')}
           </Link>
         </Card>
 
         <Card>
-          <strong>Próximo pago</strong>
+          <strong>{t('studentHome.nextPayment')}</strong>
           <p style={{ color: 'var(--oc-text-muted)', marginTop: 'var(--oc-space-2)' }}>
             {nextPayment
-              ? `${nextPayment.amount} ${nextPayment.currency} · vence ${nextPayment.period_end}`
-              : 'No tenés pagos pendientes.'}
+              ? t('studentHome.dueLabel', {
+                  amount: nextPayment.amount,
+                  currency: nextPayment.currency,
+                  date: nextPayment.period_end,
+                })
+              : t('studentHome.noPending')}
           </p>
           <Link to="/mi/pagos" style={{ color: 'var(--oc-gold)', fontSize: 14 }}>
-            Ver pagos →
+            {t('studentHome.viewPayments')}
           </Link>
         </Card>
       </div>

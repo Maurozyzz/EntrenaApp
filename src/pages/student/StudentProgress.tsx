@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
+import { useLanguage } from '../../lib/i18n';
 import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -16,19 +17,20 @@ const PHOTOS_BUCKET = 'progress-photos';
 
 type Metric = 'weight_kg' | 'waist_cm';
 
-const METRIC_LABELS: Record<Metric, { label: string; unit: string }> = {
-  weight_kg: { label: 'Peso', unit: 'kg' },
-  waist_cm: { label: 'Cintura', unit: 'cm' },
-};
-
 export function StudentProgress() {
   const { profile } = useAuth();
+  const { t } = useLanguage();
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<Metric>('weight_kg');
   const [weightKg, setWeightKg] = useState('');
   const [waistCm, setWaistCm] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const metricLabels: Record<Metric, { label: string; unit: string }> = {
+    weight_kg: { label: t('progress.weight'), unit: 'kg' },
+    waist_cm: { label: t('progress.waist'), unit: 'cm' },
+  };
 
   const [comparePhotos, setComparePhotos] = useState<{ before: { url: string; date: string }; after: { url: string; date: string } } | null>(null);
 
@@ -98,22 +100,22 @@ export function StudentProgress() {
 
   return (
     <AppShell links={STUDENT_NAV}>
-      <h1 style={{ color: 'var(--oc-gold)' }}>Mi progreso</h1>
+      <h1 style={{ color: 'var(--oc-gold)' }}>{t('progress.title')}</h1>
 
       <Card style={{ marginTop: 'var(--oc-space-4)', marginBottom: 'var(--oc-space-4)' }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 'var(--oc-space-3)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ width: 100 }}>
-            <Field label="Peso (kg)">
+            <Field label={t('progress.weightKg')}>
               <Input value={weightKg} onChange={(e) => setWeightKg(e.target.value)} inputMode="decimal" />
             </Field>
           </div>
           <div style={{ width: 100 }}>
-            <Field label="Cintura (cm)">
+            <Field label={t('progress.waistCm')}>
               <Input value={waistCm} onChange={(e) => setWaistCm(e.target.value)} inputMode="decimal" />
             </Field>
           </div>
           <Button type="submit" disabled={saving}>
-            {saving ? 'Guardando…' : 'Cargar medición'}
+            {saving ? t('common.saving') : t('progress.logMeasurement')}
           </Button>
         </form>
       </Card>
@@ -123,19 +125,19 @@ export function StudentProgress() {
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--oc-space-2)' }}>
             <div style={{ width: 140 }}>
               <Select value={metric} onChange={(e) => setMetric(e.target.value as Metric)}>
-                <option value="weight_kg">Peso</option>
-                <option value="waist_cm">Cintura</option>
+                <option value="weight_kg">{t('progress.weight')}</option>
+                <option value="waist_cm">{t('progress.waist')}</option>
               </Select>
             </div>
           </div>
-          <ProgressLineChart points={chartPoints} label={METRIC_LABELS[metric].label} unit={METRIC_LABELS[metric].unit} />
+          <ProgressLineChart points={chartPoints} label={metricLabels[metric].label} unit={metricLabels[metric].unit} />
         </Card>
       )}
 
       {loading ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>
       ) : measurements.length === 0 ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Todavía no cargaste mediciones.</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('progress.noMeasurements')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-2)' }}>
           {measurements.map((m) => (
@@ -143,7 +145,7 @@ export function StudentProgress() {
               <strong>{m.measured_at}</strong>
               <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>
                 {' '}
-                {m.weight_kg ? `· ${m.weight_kg}kg` : ''} {m.waist_cm ? `· cintura ${m.waist_cm}cm` : ''}
+                {m.weight_kg ? `· ${m.weight_kg}kg` : ''} {m.waist_cm ? t('progress.waistSuffix', { cm: m.waist_cm }) : ''}
               </span>
             </Card>
           ))}
@@ -152,11 +154,11 @@ export function StudentProgress() {
 
       {profile && (
         <>
-          <h2 style={{ color: 'var(--oc-gold)', marginTop: 'var(--oc-space-6)' }}>Fotos de progreso</h2>
+          <h2 style={{ color: 'var(--oc-gold)', marginTop: 'var(--oc-space-6)' }}>{t('progress.photosTitle')}</h2>
 
           {comparePhotos && (
             <Card style={{ marginBottom: 'var(--oc-space-4)' }}>
-              <p style={{ color: 'var(--oc-text-muted)', fontSize: 13, marginTop: 0 }}>Arrastrá para comparar</p>
+              <p style={{ color: 'var(--oc-text-muted)', fontSize: 13, marginTop: 0 }}>{t('progress.dragToCompare')}</p>
               <BeforeAfterSlider before={comparePhotos.before} after={comparePhotos.after} />
             </Card>
           )}
@@ -165,8 +167,8 @@ export function StudentProgress() {
             bucket="progress-photos"
             table="progress_photos"
             studentId={profile.id}
-            uploadLabel="+ Subir una foto"
-            emptyLabel="Todavía no subiste fotos."
+            uploadLabel={t('progress.uploadPhoto')}
+            emptyLabel={t('progress.noPhotos')}
             onUploaded={loadComparePhotos}
           />
         </>

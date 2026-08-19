@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
+import { useLanguage } from '../../lib/i18n';
 import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
 import { StatusPill } from '../../components/ui/StatusPill';
@@ -12,6 +13,7 @@ const RECEIPTS_BUCKET = 'payment-receipts';
 
 export function StudentPayments() {
   const { profile } = useAuth();
+  const { t } = useLanguage();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
@@ -74,21 +76,26 @@ export function StudentPayments() {
 
   return (
     <AppShell links={STUDENT_NAV}>
-      <h1 style={{ color: 'var(--oc-gold)' }}>Mis pagos</h1>
+      <h1 style={{ color: 'var(--oc-gold)' }}>{t('payments.title')}</h1>
 
       {error && <p style={{ color: 'var(--oc-danger)', fontSize: 13 }}>{error}</p>}
 
       {loading ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>
       ) : payments.length === 0 ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Todavía no hay pagos registrados.</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('payments.noPayments')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-2)', marginTop: 'var(--oc-space-4)' }}>
           {payments.map((payment) => (
             <Card key={payment.id} style={{ padding: 'var(--oc-space-3) var(--oc-space-4)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--oc-space-2)' }}>
                 <span>
-                  {payment.period_start} → {payment.period_end} · {payment.amount} {payment.currency}
+                  {t('payments.rangeLine', {
+                    start: payment.period_start,
+                    end: payment.period_end,
+                    amount: payment.amount,
+                    currency: payment.currency,
+                  })}
                 </span>
                 <StatusPill status={payment.status} />
               </div>
@@ -96,7 +103,7 @@ export function StudentPayments() {
               <div style={{ marginTop: 'var(--oc-space-2)', fontSize: 13 }}>
                 {receiptUrls[payment.id] ? (
                   <a href={receiptUrls[payment.id]} target="_blank" rel="noreferrer">
-                    Ver comprobante subido
+                    {t('payments.viewReceipt')}
                   </a>
                 ) : payment.status === 'pending' ? (
                   <label style={{ color: 'var(--oc-energy)', cursor: 'pointer' }}>
@@ -107,10 +114,10 @@ export function StudentPayments() {
                       disabled={uploadingId === payment.id}
                       onChange={(e) => handleUpload(payment.id, e)}
                     />
-                    {uploadingId === payment.id ? 'Subiendo…' : '+ Subir comprobante'}
+                    {uploadingId === payment.id ? t('common.uploading') : t('payments.uploadReceipt')}
                   </label>
                 ) : (
-                  <span style={{ color: 'var(--oc-text-muted)' }}>Sin comprobante</span>
+                  <span style={{ color: 'var(--oc-text-muted)' }}>{t('payments.noReceipt')}</span>
                 )}
               </div>
             </Card>

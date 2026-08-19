@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
+import { useLanguage } from '../../lib/i18n';
 import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -15,6 +16,7 @@ import './StudentRoutine.css';
 
 export function StudentRoutine() {
   const { profile } = useAuth();
+  const { t } = useLanguage();
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [items, setItems] = useState<RoutineExerciseWithName[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,20 +75,20 @@ export function StudentRoutine() {
 
   return (
     <AppShell links={STUDENT_NAV}>
-      <h1 style={{ color: 'var(--oc-gold)' }}>Mi rutina</h1>
+      <h1 style={{ color: 'var(--oc-gold)' }}>{t('routine.title')}</h1>
 
       {loading ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>
       ) : !routine ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Todavía no tenés una rutina asignada.</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('routine.noRoutine')}</p>
       ) : items.length === 0 ? (
-        <p style={{ color: 'var(--oc-text-muted)' }}>Tu rutina todavía no tiene ejercicios cargados.</p>
+        <p style={{ color: 'var(--oc-text-muted)' }}>{t('routine.noExercises')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-5)', marginTop: 'var(--oc-space-4)' }}>
           {groupByDay(items).map(({ day, items: dayItems }) => (
             <div key={day ?? 'none'}>
               <h2 style={{ color: 'var(--oc-gold)', fontSize: 18 }}>
-                {dayLabel(day)}
+                {dayLabel(day, t)}
                 {muscleGroupSummary(dayItems) && (
                   <span style={{ color: 'var(--oc-text-muted)', fontWeight: 400, fontSize: 14 }}>
                     {' '}
@@ -104,9 +106,9 @@ export function StudentRoutine() {
                       {item.exercises?.name}
                     </strong>
                     <p style={{ color: 'var(--oc-text-muted)', fontSize: 13, marginTop: 'var(--oc-space-1)' }}>
-                      {item.sets ?? '—'} series x {item.reps ?? '—'} reps
-                      {item.weight_target ? ` · objetivo ${item.weight_target}kg` : ''}
-                      {item.rest_seconds ? ` · descanso ${item.rest_seconds}s` : ''}
+                      {t('routine.setsReps', { sets: item.sets ?? '—', reps: item.reps ?? '—' })}
+                      {item.weight_target ? t('routine.targetSuffix', { weight: item.weight_target }) : ''}
+                      {item.rest_seconds ? t('routine.restSuffix', { sec: item.rest_seconds }) : ''}
                     </p>
 
                     {logging === item.id ? (
@@ -115,26 +117,26 @@ export function StudentRoutine() {
                         style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 'var(--oc-space-3)' }}
                       >
                         <div style={{ width: 90 }}>
-                          <Field label="Series hechas">
+                          <Field label={t('routine.setsDone')}>
                             <Input value={setsCompleted} onChange={(e) => setSetsCompleted(e.target.value)} inputMode="numeric" />
                           </Field>
                         </div>
                         <div style={{ width: 90 }}>
-                          <Field label="Peso usado">
+                          <Field label={t('routine.weightUsed')}>
                             <Input value={weightUsed} onChange={(e) => setWeightUsed(e.target.value)} inputMode="decimal" />
                           </Field>
                         </div>
                         <Button type="submit" disabled={saving}>
-                          {saving ? 'Guardando…' : 'Guardar'}
+                          {saving ? t('common.saving') : t('routine.save')}
                         </Button>
                         <Button type="button" variant="ghost" onClick={() => setLogging(null)}>
-                          Cancelar
+                          {t('common.cancel')}
                         </Button>
                       </form>
                     ) : (
                       <div style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', marginTop: 'var(--oc-space-3)' }}>
                         <Button variant="secondary" onClick={() => setLogging(item.id)}>
-                          Registrar serie
+                          {t('routine.logSet')}
                         </Button>
                         {selectedId === item.id && item.exercises?.name && (
                           <a
@@ -143,7 +145,7 @@ export function StudentRoutine() {
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            ▶ Ver cómo hacerlo
+                            {t('routine.howTo')}
                           </a>
                         )}
                       </div>
@@ -158,7 +160,7 @@ export function StudentRoutine() {
 
       {profile && (
         <>
-          <h2 style={{ color: 'var(--oc-gold)', marginTop: 'var(--oc-space-6)' }}>Historial</h2>
+          <h2 style={{ color: 'var(--oc-gold)', marginTop: 'var(--oc-space-6)' }}>{t('routine.history')}</h2>
           <WorkoutHistory key={historyKey} studentId={profile.id} />
         </>
       )}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { useLanguage } from '../lib/i18n';
 import { Card } from './ui/Card';
 import type { WorkoutLogWithExercise } from '../lib/types';
 
@@ -10,6 +11,7 @@ interface PersonalRecord {
 }
 
 export function WorkoutHistory({ studentId }: { studentId: string }) {
+  const { t, lang } = useLanguage();
   const [logs, setLogs] = useState<WorkoutLogWithExercise[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,8 +29,8 @@ export function WorkoutHistory({ studentId }: { studentId: string }) {
       });
   }, [studentId]);
 
-  if (loading) return <p style={{ color: 'var(--oc-text-muted)' }}>Cargando…</p>;
-  if (logs.length === 0) return <p style={{ color: 'var(--oc-text-muted)' }}>Todavía no hay series registradas.</p>;
+  if (loading) return <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>;
+  if (logs.length === 0) return <p style={{ color: 'var(--oc-text-muted)' }}>{t('workoutHistory.noLogs')}</p>;
 
   const records = new Map<string, PersonalRecord>();
   for (const log of logs) {
@@ -41,6 +43,8 @@ export function WorkoutHistory({ studentId }: { studentId: string }) {
   }
   const recordList = [...records.values()].sort((a, b) => b.weight - a.weight);
 
+  const dateLocale = lang === 'en' ? 'en-US' : 'es-AR';
+
   return (
     <div>
       {recordList.length > 0 && (
@@ -51,7 +55,7 @@ export function WorkoutHistory({ studentId }: { studentId: string }) {
                 {record.exerciseName}
               </div>
               <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--oc-energy)' }}>{record.weight}kg</div>
-              <div style={{ fontSize: 11, color: 'var(--oc-text-muted)' }}>mejor marca</div>
+              <div style={{ fontSize: 11, color: 'var(--oc-text-muted)' }}>{t('workoutHistory.bestMark')}</div>
             </Card>
           ))}
         </div>
@@ -75,13 +79,14 @@ export function WorkoutHistory({ studentId }: { studentId: string }) {
             }}
           >
             <span>
-              <strong>{log.routine_exercises?.exercises?.name ?? 'Ejercicio'}</strong>
+              <strong>{log.routine_exercises?.exercises?.name ?? t('workoutHistory.exerciseFallback')}</strong>
               <span style={{ color: 'var(--oc-text-muted)' }}>
                 {' '}
-                · {log.sets_completed ?? '—'} series {log.weight_used ? `· ${log.weight_used}kg` : ''}
+                {t('workoutHistory.setsLine', { sets: log.sets_completed ?? '—' })}{' '}
+                {log.weight_used ? t('workoutHistory.weightSuffix', { weight: log.weight_used }) : ''}
               </span>
             </span>
-            <span style={{ color: 'var(--oc-text-muted)' }}>{new Date(log.performed_at).toLocaleDateString('es-AR')}</span>
+            <span style={{ color: 'var(--oc-text-muted)' }}>{new Date(log.performed_at).toLocaleDateString(dateLocale)}</span>
           </div>
         ))}
       </div>

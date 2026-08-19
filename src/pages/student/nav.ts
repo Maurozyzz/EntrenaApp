@@ -1,7 +1,7 @@
 export const STUDENT_NAV = [
-  { to: '/mi', label: 'Inicio' },
-  { to: '/mi/rutina', label: 'Rutina' },
-  { to: '/mi/progreso', label: 'Progreso' },
-  { to: '/mi/dieta', label: 'Dieta' },
-  { to: '/mi/pagos', label: 'Pagos' },
+  { to: '/mi', labelKey: 'nav.home' },
+  { to: '/mi/rutina', labelKey: 'nav.routine' },
+  { to: '/mi/progreso', labelKey: 'nav.progress' },
+  { to: '/mi/dieta', labelKey: 'nav.diet' },
+  { to: '/mi/pagos', labelKey: 'nav.payments' },
 ];

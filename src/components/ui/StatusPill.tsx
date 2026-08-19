@@ -1,12 +1,14 @@
+import { useLanguage } from '../../lib/i18n';
 import './StatusPill.css';
 import type { PaymentStatus } from '../../lib/types';
 
-const LABELS: Record<PaymentStatus, string> = {
-  pending: 'Pendiente',
-  paid: 'Pagado',
-  overdue: 'Vencido',
+const KEYS: Record<PaymentStatus, string> = {
+  pending: 'status.pending',
+  paid: 'status.paid',
+  overdue: 'status.overdue',
 };
 
 export function StatusPill({ status }: { status: PaymentStatus }) {
-  return <span className={`oc-pill oc-pill--${status}`}>{LABELS[status]}</span>;
+  const { t } = useLanguage();
+  return <span className={`oc-pill oc-pill--${status}`}>{t(KEYS[status])}</span>;
 }

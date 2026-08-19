@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
+import { useLanguage } from '../lib/i18n';
 import type { Role } from '../lib/types';
 
 interface RequireAuthProps {
@@ -10,9 +11,10 @@ interface RequireAuthProps {
 
 export function RequireAuth({ children, role }: RequireAuthProps) {
   const { session, profile, profileError, loading, signOut } = useAuth();
+  const { t } = useLanguage();
 
   if (loading) {
-    return <p style={{ padding: 'var(--oc-space-5)', color: 'var(--oc-text-muted)' }}>Cargando…</p>;
+    return <p style={{ padding: 'var(--oc-space-5)', color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>;
   }
 
   if (!session) {
@@ -24,13 +26,13 @@ export function RequireAuth({ children, role }: RequireAuthProps) {
   if (!profile) {
     return (
       <div style={{ padding: 'var(--oc-space-5)', color: 'var(--oc-danger)' }}>
-        <p>No pudimos cargar tu perfil{profileError ? `: ${profileError}` : '.'}</p>
+        <p>{t('auth.profileLoadFailed', { detail: profileError ? `: ${profileError}` : '.' })}</p>
         <button
           type="button"
           onClick={() => signOut()}
           style={{ background: 'none', border: 'none', color: 'var(--oc-gold)', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
         >
-          Cerrar sesión
+          {t('auth.signOut')}
         </button>
       </div>
     );

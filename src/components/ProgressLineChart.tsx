@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
+import { useLanguage } from '../lib/i18n';
 import './ProgressLineChart.css';
 
 export interface ChartPoint {
@@ -20,12 +21,14 @@ const PAD_TOP = 24;
 const PAD_BOTTOM = 28;
 
 export function ProgressLineChart({ points, label, unit }: ProgressLineChartProps) {
+  const { t, lang } = useLanguage();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const dateLocale = lang === 'en' ? 'en-US' : 'es-AR';
 
   if (points.length < 2) {
     return (
       <p style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>
-        Necesitás al menos dos mediciones de {label.toLowerCase()} para ver el gráfico.
+        {t('progress.needTwo', { metric: label.toLowerCase() })}
       </p>
     );
   }
@@ -77,7 +80,7 @@ export function ProgressLineChart({ points, label, unit }: ProgressLineChartProp
           {unit}
         </span>
       </div>
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="oc-chart__svg" role="img" aria-label={`Evolución de ${label}`}>
+      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="oc-chart__svg" role="img" aria-label={t('progress.evolutionOf', { label })}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--oc-energy)" stopOpacity="0.22" />
@@ -127,7 +130,7 @@ export function ProgressLineChart({ points, label, unit }: ProgressLineChartProp
             {hovered.point.value}
             {unit}
           </strong>
-          <span>{new Date(hovered.point.date).toLocaleDateString('es-AR')}</span>
+          <span>{new Date(hovered.point.date).toLocaleDateString(dateLocale)}</span>
         </div>
       )}
     </div>

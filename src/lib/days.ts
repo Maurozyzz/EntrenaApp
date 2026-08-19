@@ -1,15 +1,18 @@
 export const DAYS = [
-  { value: 1, label: 'Lunes' },
-  { value: 2, label: 'Martes' },
-  { value: 3, label: 'Miércoles' },
-  { value: 4, label: 'Jueves' },
-  { value: 5, label: 'Viernes' },
-  { value: 6, label: 'Sábado' },
-  { value: 7, label: 'Domingo' },
+  { value: 1, key: 'day.mon' },
+  { value: 2, key: 'day.tue' },
+  { value: 3, key: 'day.wed' },
+  { value: 4, key: 'day.thu' },
+  { value: 5, key: 'day.fri' },
+  { value: 6, key: 'day.sat' },
+  { value: 7, key: 'day.sun' },
 ] as const;
 
-export function dayLabel(value: number | null): string {
-  return DAYS.find((d) => d.value === value)?.label ?? 'Sin día asignado';
+type Translate = (key: string) => string;
+
+export function dayLabel(value: number | null, t: Translate): string {
+  const day = DAYS.find((d) => d.value === value);
+  return day ? t(day.key) : t('day.none');
 }
 
 export function groupByDay<T extends { day_of_week: number | null }>(items: T[]): { day: number | null; items: T[] }[] {
