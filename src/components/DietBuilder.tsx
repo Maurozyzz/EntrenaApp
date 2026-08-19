@@ -37,6 +37,13 @@ export function DietBuilder({ studentId }: { studentId: string }) {
   const [scanning, setScanning] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [manualBarcode, setManualBarcode] = useState<string | null>(null);
+  const [manualName, setManualName] = useState('');
+  const [manualCalories, setManualCalories] = useState('');
+  const [manualProtein, setManualProtein] = useState('');
+  const [manualCarbs, setManualCarbs] = useState('');
+  const [manualFat, setManualFat] = useState('');
+  const [manualSaving, setManualSaving] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -116,7 +123,7 @@ export function DietBuilder({ studentId }: { studentId: string }) {
 
     const product = await lookupBarcode(barcode);
     if (!product) {
-      setScanError('No encontramos ese producto. Podés cargarlo manualmente.');
+      setManualBarcode(barcode);
       setScanBusy(false);
       return;
     }
@@ -152,6 +159,54 @@ export function DietBuilder({ studentId }: { studentId: string }) {
     setScanBusy(false);
   }
 
+  function cancelManualEntry() {
+    setManualBarcode(null);
+    setManualName('');
+    setManualCalories('');
+    setManualProtein('');
+    setManualCarbs('');
+    setManualFat('');
+  }
+
+  async function handleManualFoodSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!manualBarcode || !manualName || !manualCalories) return;
+    setManualSaving(true);
+    setScanError(null);
+
+    const { data: inserted, error: insertErr } = await supabase
+      .from('foods')
+      .insert({
+        name: manualName,
+        calories_per_100g: Number(manualCalories),
+        protein_per_100g: Number(manualProtein) || 0,
+        carbs_per_100g: Number(manualCarbs) || 0,
+        fat_per_100g: Number(manualFat) || 0,
+        barcode: manualBarcode,
+      })
+      .select()
+      .single();
+
+    if (insertErr || !inserted) {
+      // otro usuario pudo haber cargado el mismo código justo antes
+      const { data: retryExisting } = await supabase.from('foods').select('*').eq('barcode', manualBarcode).maybeSingle();
+      if (retryExisting) {
+        setFoods((prev) => (prev.some((f) => f.id === retryExisting.id) ? prev : [...prev, retryExisting]));
+        setFoodId(String(retryExisting.id));
+        cancelManualEntry();
+      } else {
+        setScanError(insertErr?.message ?? 'No se pudo guardar el producto.');
+      }
+      setManualSaving(false);
+      return;
+    }
+
+    setFoods((prev) => [...prev, inserted].sort((a, b) => a.name.localeCompare(b.name)));
+    setFoodId(String(inserted.id));
+    setManualSaving(false);
+    cancelManualEntry();
+  }
+
   return (
     <div>
       {entries.length > 0 && (
@@ -178,6 +233,60 @@ export function DietBuilder({ studentId }: { studentId: string }) {
           </Button>
         </div>
         {scanError && <p style={{ color: 'var(--oc-danger)', fontSize: 13, marginBottom: 'var(--oc-space-2)' }}>{scanError}</p>}
+
+        {manualBarcode && (
+          <form
+            onSubmit={handleManualFoodSubmit}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--oc-space-3)',
+              padding: 'var(--oc-space-3)',
+              marginBottom: 'var(--oc-space-3)',
+              background: 'var(--oc-surface-gradient)',
+              boxShadow: 'var(--oc-shadow-inset)',
+              borderRadius: 'var(--oc-radius-sm)',
+            }}
+          >
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--oc-text-muted)' }}>
+              No encontramos ese producto (código {manualBarcode}). Cargalo con los datos de la etiqueta y lo vamos
+              a reconocer solo la próxima vez que se escanee este mismo código.
+            </p>
+            <div style={{ display: 'flex', gap: 'var(--oc-space-3)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div style={{ flex: '1 1 200px' }}>
+                <Field label="Nombre del producto">
+                  <Input value={manualName} onChange={(e) => setManualName(e.target.value)} required />
+                </Field>
+              </div>
+              <div style={{ width: 100 }}>
+                <Field label="Kcal /100g">
+                  <Input value={manualCalories} onChange={(e) => setManualCalories(e.target.value)} inputMode="decimal" required />
+                </Field>
+              </div>
+              <div style={{ width: 100 }}>
+                <Field label="Proteína /100g">
+                  <Input value={manualProtein} onChange={(e) => setManualProtein(e.target.value)} inputMode="decimal" />
+                </Field>
+              </div>
+              <div style={{ width: 100 }}>
+                <Field label="Carbos /100g">
+                  <Input value={manualCarbs} onChange={(e) => setManualCarbs(e.target.value)} inputMode="decimal" />
+                </Field>
+              </div>
+              <div style={{ width: 100 }}>
+                <Field label="Grasas /100g">
+                  <Input value={manualFat} onChange={(e) => setManualFat(e.target.value)} inputMode="decimal" />
+                </Field>
+              </div>
+              <Button type="submit" disabled={manualSaving}>
+                {manualSaving ? 'Guardando…' : 'Guardar producto'}
+              </Button>
+              <Button type="button" variant="ghost" onClick={cancelManualEntry} disabled={manualSaving}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        )}
 
         <form onSubmit={handleAdd} style={{ display: 'flex', gap: 'var(--oc-space-3)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ flex: '1 1 200px' }}>
