@@ -8,13 +8,14 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Field, Input } from '../../components/ui/Input';
 import { youtubeSearchUrl } from '../../lib/youtube';
+import { translateExerciseName, translateMuscleGroup } from '../../lib/catalogTranslations';
 import { COACH_NAV } from './nav';
 import type { Exercise } from '../../lib/types';
 import '../student/StudentRoutine.css';
 
 export function CoachExercises() {
   const { profile } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
@@ -54,13 +55,15 @@ export function CoachExercises() {
     loadExercises();
   }
 
-  const filteredExercises = exercises.filter((exercise) => {
-    const query = search.trim().toLowerCase();
-    if (!query) return true;
-    return (
-      exercise.name.toLowerCase().includes(query) || (exercise.muscle_group ?? '').toLowerCase().includes(query)
-    );
-  });
+  const filteredExercises = exercises
+    .filter((exercise) => {
+      const query = search.trim().toLowerCase();
+      if (!query) return true;
+      const name = translateExerciseName(exercise.name, lang).toLowerCase();
+      const muscleGroup = translateMuscleGroup(exercise.muscle_group ?? '', lang).toLowerCase();
+      return name.includes(query) || muscleGroup.includes(query);
+    })
+    .sort((a, b) => translateExerciseName(a.name, lang).localeCompare(translateExerciseName(b.name, lang)));
 
   return (
     <AppShell links={COACH_NAV}>
@@ -117,14 +120,17 @@ export function CoachExercises() {
                   onClick={() => setSelectedId(selectedId === exercise.id ? null : exercise.id)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <strong>{exercise.name}</strong>
+                  <strong>{translateExerciseName(exercise.name, lang)}</strong>
                   {exercise.muscle_group && (
-                    <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}> · {exercise.muscle_group}</span>
+                    <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>
+                      {' '}
+                      · {translateMuscleGroup(exercise.muscle_group, lang)}
+                    </span>
                   )}
                 </span>
                 {selectedId === exercise.id && (
                   <a
-                    href={youtubeSearchUrl(exercise.name)}
+                    href={youtubeSearchUrl(translateExerciseName(exercise.name, lang), lang)}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ color: 'var(--oc-gold)', fontSize: 13 }}

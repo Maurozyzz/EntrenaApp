@@ -1,3 +1,6 @@
+import type { Lang } from './i18n';
+import { translateMuscleGroup } from './catalogTranslations';
+
 export const DAYS = [
   { value: 1, key: 'day.mon' },
   { value: 2, key: 'day.tue' },
@@ -26,11 +29,13 @@ export function groupByDay<T extends { day_of_week: number | null }>(items: T[])
   return order.filter((d) => map.has(d)).map((d) => ({ day: d, items: map.get(d) as T[] }));
 }
 
-export function muscleGroupSummary(items: { exercises: { muscle_group: string | null } | null }[]): string {
+export function muscleGroupSummary(items: { exercises: { muscle_group: string | null } | null }[], lang: Lang): string {
   const groups: string[] = [];
   for (const item of items) {
     const mg = item.exercises?.muscle_group;
-    if (mg && !groups.includes(mg)) groups.push(mg);
+    if (!mg) continue;
+    const translated = translateMuscleGroup(mg, lang);
+    if (!groups.includes(translated)) groups.push(translated);
   }
   return groups.join(', ');
 }

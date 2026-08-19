@@ -7,6 +7,7 @@ import { Button } from './ui/Button';
 import { Field, Input, Select } from './ui/Input';
 import { computeMacros, roundMacro as round } from '../lib/macros';
 import { lookupBarcode } from '../lib/openFoodFacts';
+import { translateFoodName } from '../lib/catalogTranslations';
 import type { DietEntryWithFood, Food, QuantityUnit } from '../lib/types';
 
 const BarcodeScanner = lazy(() => import('./BarcodeScanner').then((m) => ({ default: m.BarcodeScanner })));
@@ -27,7 +28,7 @@ function groupByMeal(entries: DietEntryWithFood[]): MealGroup[] {
 }
 
 export function DietBuilder({ studentId }: { studentId: string }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [foods, setFoods] = useState<Food[]>([]);
   const [entries, setEntries] = useState<DietEntryWithFood[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +70,9 @@ export function DietBuilder({ studentId }: { studentId: string }) {
 
   const selectedFood = foods.find((f) => f.id === Number(foodId)) ?? null;
   const preview = computeMacros(selectedFood, Number(quantity) || 0);
+  const sortedFoods = [...foods].sort((a, b) =>
+    translateFoodName(a.name, lang).localeCompare(translateFoodName(b.name, lang)),
+  );
 
   function sumMacros(list: DietEntryWithFood[]) {
     return list.reduce(
@@ -292,9 +296,9 @@ export function DietBuilder({ studentId }: { studentId: string }) {
             <Field label={t('dietBuilder.food')}>
               <Select value={foodId} onChange={(e) => setFoodId(e.target.value)} required>
                 <option value="">{t('dietBuilder.choose')}</option>
-                {foods.map((food) => (
+                {sortedFoods.map((food) => (
                   <option key={food.id} value={food.id}>
-                    {food.name}
+                    {translateFoodName(food.name, lang)}
                   </option>
                 ))}
               </Select>
@@ -370,7 +374,7 @@ export function DietBuilder({ studentId }: { studentId: string }) {
                     return (
                       <div key={entry.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--oc-space-2)', fontSize: 13 }}>
                         <span>
-                          <strong>{entry.foods?.name ?? t('dietBuilder.foodFallback')}</strong>
+                          <strong>{entry.foods?.name ? translateFoodName(entry.foods.name, lang) : t('dietBuilder.foodFallback')}</strong>
                           <span style={{ color: 'var(--oc-text-muted)' }}>
                             {' '}
                             {t('dietBuilder.entryLine', {

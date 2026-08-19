@@ -11,12 +11,13 @@ import { STUDENT_NAV } from './nav';
 import { youtubeSearchUrl } from '../../lib/youtube';
 import { WorkoutHistory } from '../../components/WorkoutHistory';
 import { dayLabel, groupByDay, muscleGroupSummary } from '../../lib/days';
+import { translateExerciseName } from '../../lib/catalogTranslations';
 import type { Routine, RoutineExerciseWithName } from '../../lib/types';
 import './StudentRoutine.css';
 
 export function StudentRoutine() {
   const { profile } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [items, setItems] = useState<RoutineExerciseWithName[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,10 +90,10 @@ export function StudentRoutine() {
             <div key={day ?? 'none'}>
               <h2 style={{ color: 'var(--oc-gold)', fontSize: 18 }}>
                 {dayLabel(day, t)}
-                {muscleGroupSummary(dayItems) && (
+                {muscleGroupSummary(dayItems, lang) && (
                   <span style={{ color: 'var(--oc-text-muted)', fontWeight: 400, fontSize: 14 }}>
                     {' '}
-                    · {muscleGroupSummary(dayItems)}
+                    · {muscleGroupSummary(dayItems, lang)}
                   </span>
                 )}
               </h2>
@@ -103,7 +104,7 @@ export function StudentRoutine() {
                       onClick={() => setSelectedId(selectedId === item.id ? null : item.id)}
                       style={{ cursor: 'pointer' }}
                     >
-                      {item.exercises?.name}
+                      {item.exercises?.name ? translateExerciseName(item.exercises.name, lang) : ''}
                     </strong>
                     <p style={{ color: 'var(--oc-text-muted)', fontSize: 13, marginTop: 'var(--oc-space-1)' }}>
                       {t('routine.setsReps', { sets: item.sets ?? '—', reps: item.reps ?? '—' })}
@@ -141,7 +142,7 @@ export function StudentRoutine() {
                         {selectedId === item.id && item.exercises?.name && (
                           <a
                             className="oc-button oc-button--ghost"
-                            href={youtubeSearchUrl(item.exercises.name)}
+                            href={youtubeSearchUrl(translateExerciseName(item.exercises.name, lang), lang)}
                             target="_blank"
                             rel="noopener noreferrer"
                           >

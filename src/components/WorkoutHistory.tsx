@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useLanguage } from '../lib/i18n';
+import { translateExerciseName } from '../lib/catalogTranslations';
 import { Card } from './ui/Card';
 import type { WorkoutLogWithExercise } from '../lib/types';
 
@@ -34,8 +35,9 @@ export function WorkoutHistory({ studentId }: { studentId: string }) {
 
   const records = new Map<string, PersonalRecord>();
   for (const log of logs) {
-    const name = log.routine_exercises?.exercises?.name;
-    if (!name || log.weight_used == null) continue;
+    const rawName = log.routine_exercises?.exercises?.name;
+    if (!rawName || log.weight_used == null) continue;
+    const name = translateExerciseName(rawName, lang);
     const current = records.get(name);
     if (!current || log.weight_used > current.weight) {
       records.set(name, { exerciseName: name, weight: log.weight_used, performedAt: log.performed_at });
@@ -79,7 +81,11 @@ export function WorkoutHistory({ studentId }: { studentId: string }) {
             }}
           >
             <span>
-              <strong>{log.routine_exercises?.exercises?.name ?? t('workoutHistory.exerciseFallback')}</strong>
+              <strong>
+                {log.routine_exercises?.exercises?.name
+                  ? translateExerciseName(log.routine_exercises.exercises.name, lang)
+                  : t('workoutHistory.exerciseFallback')}
+              </strong>
               <span style={{ color: 'var(--oc-text-muted)' }}>
                 {' '}
                 {t('workoutHistory.setsLine', { sets: log.sets_completed ?? '—' })}{' '}

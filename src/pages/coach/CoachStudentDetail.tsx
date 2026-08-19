@@ -13,6 +13,7 @@ import { DietBuilder } from '../../components/DietBuilder';
 import { WorkoutHistory } from '../../components/WorkoutHistory';
 import { COACH_NAV } from './nav';
 import { DAYS, dayLabel, groupByDay, muscleGroupSummary } from '../../lib/days';
+import { translateExerciseName } from '../../lib/catalogTranslations';
 import type {
   Exercise,
   NutritionPlan,
@@ -55,7 +56,7 @@ export function CoachStudentDetail() {
 }
 
 function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId: string }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [items, setItems] = useState<RoutineExerciseWithName[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -158,8 +159,8 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
                 <div key={day ?? 'none'}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--oc-gold)', marginBottom: 'var(--oc-space-2)' }}>
                     {dayLabel(day, t)}
-                    {muscleGroupSummary(dayItems) && (
-                      <span style={{ color: 'var(--oc-text-muted)', fontWeight: 400 }}> · {muscleGroupSummary(dayItems)}</span>
+                    {muscleGroupSummary(dayItems, lang) && (
+                      <span style={{ color: 'var(--oc-text-muted)', fontWeight: 400 }}> · {muscleGroupSummary(dayItems, lang)}</span>
                     )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-2)' }}>
@@ -179,7 +180,7 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
                         }}
                       >
                         <span>
-                          <strong>{item.exercises?.name}</strong>
+                          <strong>{item.exercises?.name ? translateExerciseName(item.exercises.name, lang) : ''}</strong>
                           <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>
                             {' '}
                             {t('coachStudentDetail.setsRepsLine', { sets: item.sets ?? '—', reps: item.reps ?? '—' })}
@@ -220,7 +221,7 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
                   <option value="">{t('coachStudentDetail.choose')}</option>
                   {exercises.map((ex) => (
                     <option key={ex.id} value={ex.id}>
-                      {ex.name}
+                      {translateExerciseName(ex.name, lang)}
                     </option>
                   ))}
                 </Select>
