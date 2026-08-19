@@ -21,6 +21,28 @@ export function AppShell({ links, children }: AppShellProps) {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <button
+        type="button"
+        onClick={toggleLang}
+        aria-label={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
+        title={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
+        style={{
+          position: 'fixed',
+          top: 'var(--oc-space-4)',
+          right: 'var(--oc-space-4)',
+          zIndex: 20,
+          background: 'var(--oc-ink)',
+          border: '1px solid var(--oc-border)',
+          borderRadius: 'var(--oc-radius-sm)',
+          color: 'var(--oc-text-muted)',
+          cursor: 'pointer',
+          fontSize: 12,
+          fontWeight: 700,
+          padding: '6px 10px',
+        }}
+      >
+        {t('nav.langToggle')}
+      </button>
       <header className="oc-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-5)', flexWrap: 'wrap' }}>
           <span style={{ fontFamily: 'var(--oc-font-display)', color: 'var(--oc-gold)', fontWeight: 700 }}>
@@ -39,28 +61,10 @@ export function AppShell({ links, children }: AppShellProps) {
             ))}
           </nav>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-3)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-3)', paddingRight: 48 }}>
           <span style={{ fontSize: 13, color: 'var(--oc-text-muted)' }}>
             {profile?.full_name || profile?.email}
           </span>
-          <button
-            type="button"
-            onClick={toggleLang}
-            aria-label={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
-            title={lang === 'es' ? 'Switch to English' : 'Cambiar a Español'}
-            style={{
-              background: 'none',
-              border: '1px solid var(--oc-border)',
-              borderRadius: 'var(--oc-radius-sm)',
-              color: 'var(--oc-text-muted)',
-              cursor: 'pointer',
-              fontSize: 12,
-              fontWeight: 700,
-              padding: '6px 10px',
-            }}
-          >
-            {t('nav.langToggle')}
-          </button>
           <Button variant="ghost" onClick={() => signOut()}>
             {t('nav.signOut')}
           </Button>
