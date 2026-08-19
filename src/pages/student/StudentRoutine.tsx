@@ -19,6 +19,7 @@ export function StudentRoutine() {
   const [items, setItems] = useState<RoutineExerciseWithName[]>([]);
   const [loading, setLoading] = useState(true);
   const [logging, setLogging] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [setsCompleted, setSetsCompleted] = useState('');
   const [weightUsed, setWeightUsed] = useState('');
   const [saving, setSaving] = useState(false);
@@ -96,7 +97,12 @@ export function StudentRoutine() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-3)' }}>
                 {dayItems.map((item) => (
                   <Card key={item.id}>
-                    <strong>{item.exercises?.name}</strong>
+                    <strong
+                      onClick={() => setSelectedId(selectedId === item.id ? null : item.id)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {item.exercises?.name}
+                    </strong>
                     <p style={{ color: 'var(--oc-text-muted)', fontSize: 13, marginTop: 'var(--oc-space-1)' }}>
                       {item.sets ?? '—'} series x {item.reps ?? '—'} reps
                       {item.weight_target ? ` · objetivo ${item.weight_target}kg` : ''}
@@ -130,7 +136,7 @@ export function StudentRoutine() {
                         <Button variant="secondary" onClick={() => setLogging(item.id)}>
                           Registrar serie
                         </Button>
-                        {item.exercises?.name && (
+                        {selectedId === item.id && item.exercises?.name && (
                           <a
                             className="oc-button oc-button--ghost"
                             href={youtubeSearchUrl(item.exercises.name)}

@@ -24,6 +24,7 @@ export function CoachExercises() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   async function loadExercises() {
     const { data } = await supabase.from('exercises').select('*').order('name', { ascending: true });
@@ -112,20 +113,25 @@ export function CoachExercises() {
           {filteredExercises.map((exercise) => (
             <Card key={exercise.id} style={{ padding: 'var(--oc-space-3) var(--oc-space-4)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--oc-space-2)' }}>
-                <span>
+                <span
+                  onClick={() => setSelectedId(selectedId === exercise.id ? null : exercise.id)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <strong>{exercise.name}</strong>
                   {exercise.muscle_group && (
                     <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}> · {exercise.muscle_group}</span>
                   )}
                 </span>
-                <a
-                  href={youtubeSearchUrl(exercise.name)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'var(--oc-gold)', fontSize: 13 }}
-                >
-                  ▶ Ver video
-                </a>
+                {selectedId === exercise.id && (
+                  <a
+                    href={youtubeSearchUrl(exercise.name)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--oc-gold)', fontSize: 13 }}
+                  >
+                    ▶ Ver video
+                  </a>
+                )}
               </div>
             </Card>
           ))}
