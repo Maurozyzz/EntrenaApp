@@ -1,4 +1,3 @@
-import { useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
@@ -19,27 +18,9 @@ interface AppShellProps {
 export function AppShell({ links, children }: AppShellProps) {
   const { signOut, profile } = useAuth();
   const { t, lang, toggleLang } = useLanguage();
-  const headerRef = useRef<HTMLElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(0);
-
-  // El header es "position: fixed" para que quede siempre pegado arriba de
-  // la pantalla, así que hay que dejarle ese mismo espacio arriba del
-  // contenido (si no, el contenido queda tapado debajo). Se mide en vez de
-  // hardcodear un número porque el header cambia de alto según el idioma y
-  // el ancho de pantalla (en celular las cosas se acomodan en más de una
-  // línea).
-  useLayoutEffect(() => {
-    const el = headerRef.current;
-    if (!el) return;
-    const update = () => setHeaderHeight(el.offsetHeight);
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="oc-shell">
       <button
         type="button"
         onClick={toggleLang}
@@ -62,7 +43,7 @@ export function AppShell({ links, children }: AppShellProps) {
       >
         {t('nav.langToggle')}
       </button>
-      <header ref={headerRef} className="oc-header">
+      <header className="oc-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--oc-space-5)', flexWrap: 'wrap' }}>
           <span style={{ fontFamily: 'var(--oc-font-display)', color: 'var(--oc-gold)', fontWeight: 700 }}>
             {t('app.name')}
@@ -89,18 +70,8 @@ export function AppShell({ links, children }: AppShellProps) {
           </Button>
         </div>
       </header>
-      <main
-        style={{
-          flex: 1,
-          padding: 'var(--oc-space-5)',
-          paddingTop: headerHeight + 24,
-          width: '100%',
-          maxWidth: 960,
-          margin: '0 auto',
-          boxSizing: 'border-box',
-        }}
-      >
-        {children}
+      <main className="oc-main">
+        <div className="oc-main__inner">{children}</div>
       </main>
     </div>
   );
