@@ -85,17 +85,39 @@ export interface BodyMeasurement {
   notes: string | null;
 }
 
+export type TrainingFocus = 'hypertrophy' | 'endurance' | 'strength' | 'general';
+export type TrainingLevel = 'beginner' | 'intermediate' | 'advanced';
+
 export interface StudentHealthProfile {
   student_id: string;
   trainer_id: string;
   height_cm: number | null;
   weight_kg: number | null;
+  body_fat_pct: number | null;
   age_years: number | null;
   sex: 'male' | 'female' | 'other' | null;
   activity_level: 'sedentary' | 'light' | 'moderate' | 'high';
   goal: 'lose' | 'maintain' | 'gain';
+  training_focus: TrainingFocus;
+  training_level: TrainingLevel;
+  equipment: string | null;
+  session_minutes: number | null;
+  preferred_exercises: string | null;
+  excluded_exercises: string | null;
   training_days: number;
   injuries: string | null;
+  meals_per_day: number;
+  meal_schedule: string | null;
+  preferred_foods: string | null;
+  avoided_foods: string | null;
+  allergies: string | null;
+  food_budget: string | null;
+  daily_steps: number | null;
+  sleep_hours: number | null;
+  stress_level: 'low' | 'moderate' | 'high';
+  work_type: 'sedentary' | 'active' | 'physical';
+  medical_conditions: string | null;
+  medical_clearance: boolean;
   created_at: string;
   updated_at: string;
 }

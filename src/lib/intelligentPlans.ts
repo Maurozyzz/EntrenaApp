@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
+import type { AdaptationScope } from './types';
 
-export type AdaptationScope = 'training' | 'nutrition' | 'both';
+export type { AdaptationScope };
 
 export interface PlanFeedbackInput {
   studentId: string;

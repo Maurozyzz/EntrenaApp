@@ -1,9 +1,9 @@
-import { supabase } from './supabaseClient';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AdaptationRequest,
   Profile,
   StudentMemory,
-} from './types';
+} from './types.ts';
 
 export interface StudentContextExercise {
   planDayId: string;
@@ -93,7 +93,9 @@ type Row = Record<string, any>;
 // Arma un contexto compacto y relevante del alumno para pasarle a la IA (Fase 4).
 // A propósito NO trae historial completo: solo el plan activo, feedback reciente
 // (últimos 5) y memoria activa. Si algo falla, se devuelve el error sin inventar datos.
+// Recibe el cliente por parámetro para servir tanto al frontend como a la Edge Function.
 export async function buildStudentContext(
+  supabase: SupabaseClient,
   studentId: string,
 ): Promise<{ data: StudentContext | null; error: Error | null }> {
   const [

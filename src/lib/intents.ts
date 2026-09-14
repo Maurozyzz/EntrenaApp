@@ -68,6 +68,7 @@ export interface AiProposal {
   intent: Intent;
   confidence: number;
   changes: ProposedChange[];
+  studentMessage: string;
   clarification_needed?: string;
 }
 
@@ -149,6 +150,10 @@ export function validateAiProposal(raw: unknown): ValidationOk | ValidationError
     return { ok: false, error: 'confidence debe ser un número entre 0 y 1.' };
   }
 
+  if (typeof raw.studentMessage !== 'string' || !raw.studentMessage.trim()) {
+    return { ok: false, error: 'studentMessage es obligatorio (respuesta para mostrarle al alumno).' };
+  }
+
   if (raw.clarification_needed !== undefined && typeof raw.clarification_needed !== 'string') {
     return { ok: false, error: 'clarification_needed debe ser texto.' };
   }
@@ -170,6 +175,7 @@ export function validateAiProposal(raw: unknown): ValidationOk | ValidationError
       intent: raw.intent as Intent,
       confidence: raw.confidence,
       changes,
+      studentMessage: raw.studentMessage,
       clarification_needed: raw.clarification_needed as string | undefined,
     },
   };
