@@ -85,6 +85,21 @@ export interface BodyMeasurement {
   notes: string | null;
 }
 
+export interface StudentHealthProfile {
+  student_id: string;
+  trainer_id: string;
+  height_cm: number | null;
+  weight_kg: number | null;
+  age_years: number | null;
+  sex: 'male' | 'female' | 'other' | null;
+  activity_level: 'sedentary' | 'light' | 'moderate' | 'high';
+  goal: 'lose' | 'maintain' | 'gain';
+  training_days: number;
+  injuries: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Food {
   id: number;
   name: string;

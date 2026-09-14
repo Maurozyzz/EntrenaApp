@@ -82,6 +82,73 @@ create table if not exists public.body_measurements (
   notes text
 );
 
+create table if not exists public.student_health_profiles (
+  student_id uuid primary key references public.profiles (id) on delete cascade,
+  trainer_id uuid not null references public.profiles (id),
+  height_cm numeric(5, 2),
+  weight_kg numeric(5, 2),
+  age_years smallint,
+  sex text check (sex in ('male', 'female', 'other')),
+  activity_level text not null default 'moderate' check (activity_level in ('sedentary', 'light', 'moderate', 'high')),
+  goal text not null default 'maintain' check (goal in ('lose', 'maintain', 'gain')),
+  training_focus text not null default 'hypertrophy' check (training_focus in ('hypertrophy', 'endurance', 'strength', 'general')),
+  training_level text not null default 'beginner' check (training_level in ('beginner', 'intermediate', 'advanced')),
+  equipment text,
+  session_minutes smallint default 60,
+  preferred_exercises text,
+  excluded_exercises text,
+  training_days smallint not null default 3 check (training_days between 3 and 6),
+  injuries text,
+  meals_per_day smallint not null default 4 check (meals_per_day between 3 and 6),
+  meal_schedule text,
+  preferred_foods text,
+  avoided_foods text,
+  allergies text,
+  food_budget text,
+  daily_steps int,
+  sleep_hours numeric(4, 1),
+  stress_level text not null default 'moderate',
+  work_type text not null default 'sedentary',
+  medical_conditions text,
+  medical_clearance boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.student_health_profiles
+  add column if not exists training_focus text not null default 'hypertrophy';
+alter table public.student_health_profiles add column if not exists training_level text not null default 'beginner';
+alter table public.student_health_profiles add column if not exists equipment text;
+alter table public.student_health_profiles add column if not exists session_minutes smallint default 60;
+alter table public.student_health_profiles add column if not exists preferred_exercises text;
+alter table public.student_health_profiles add column if not exists excluded_exercises text;
+alter table public.student_health_profiles add column if not exists meals_per_day smallint not null default 4;
+alter table public.student_health_profiles add column if not exists meal_schedule text;
+alter table public.student_health_profiles add column if not exists preferred_foods text;
+alter table public.student_health_profiles add column if not exists avoided_foods text;
+alter table public.student_health_profiles add column if not exists allergies text;
+alter table public.student_health_profiles add column if not exists food_budget text;
+alter table public.student_health_profiles add column if not exists body_fat_pct numeric(4, 2);
+alter table public.student_health_profiles add column if not exists daily_steps int;
+alter table public.student_health_profiles add column if not exists sleep_hours numeric(4, 1);
+alter table public.student_health_profiles add column if not exists stress_level text not null default 'moderate';
+alter table public.student_health_profiles add column if not exists work_type text not null default 'sedentary';
+alter table public.student_health_profiles add column if not exists medical_conditions text;
+alter table public.student_health_profiles add column if not exists medical_clearance boolean not null default false;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'student_health_profiles_training_focus_check'
+      and conrelid = 'public.student_health_profiles'::regclass
+  ) then
+    alter table public.student_health_profiles
+      add constraint student_health_profiles_training_focus_check
+      check (training_focus in ('hypertrophy', 'endurance', 'strength', 'general'));
+  end if;
+end $$;
+
 -- La UI de carga de fotos (bucket de Storage + policies) queda para una
 -- siguiente iteración; la tabla ya queda lista para eso.
 create table if not exists public.progress_photos (
@@ -187,6 +254,7 @@ create index if not exists routine_exercises_exercise_id_idx on public.routine_e
 create index if not exists workout_logs_student_id_idx on public.workout_logs (student_id);
 create index if not exists workout_logs_routine_exercise_id_idx on public.workout_logs (routine_exercise_id);
 create index if not exists body_measurements_student_id_idx on public.body_measurements (student_id);
+create index if not exists student_health_profiles_trainer_id_idx on public.student_health_profiles (trainer_id);
 create index if not exists progress_photos_student_id_idx on public.progress_photos (student_id);
 create index if not exists meal_photos_student_id_idx on public.meal_photos (student_id);
 create index if not exists foods_created_by_idx on public.foods (created_by);
@@ -369,6 +437,8 @@ alter table public.workout_logs enable row level security;
 alter table public.workout_logs force row level security;
 alter table public.body_measurements enable row level security;
 alter table public.body_measurements force row level security;
+alter table public.student_health_profiles enable row level security;
+alter table public.student_health_profiles force row level security;
 alter table public.progress_photos enable row level security;
 alter table public.progress_photos force row level security;
 alter table public.meal_photos enable row level security;
@@ -487,6 +557,15 @@ create policy "body_measurements_all" on public.body_measurements
   for all to authenticated
   using (student_id = (select auth.uid()) or (select private.is_trainer_of(student_id)))
   with check (student_id = (select auth.uid()) or (select private.is_trainer_of(student_id)));
+
+create policy "student_health_profiles_select" on public.student_health_profiles
+  for select to authenticated
+  using (student_id = (select auth.uid()) or trainer_id = (select auth.uid()));
+
+create policy "student_health_profiles_write" on public.student_health_profiles
+  for all to authenticated
+  using (trainer_id = (select auth.uid()))
+  with check (trainer_id = (select auth.uid()));
 
 create policy "progress_photos_all" on public.progress_photos
   for all to authenticated

@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { Field, Input, Select } from '../../components/ui/Input';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { DietBuilder } from '../../components/DietBuilder';
+import { AutoPlanBuilder } from '../../components/AutoPlanBuilder';
 import { WorkoutHistory } from '../../components/WorkoutHistory';
 import { COACH_NAV } from './nav';
 import { DAYS, dayLabel, groupByDay, muscleGroupSummary } from '../../lib/days';
@@ -43,6 +44,7 @@ export function CoachStudentDetail() {
       <h1 style={{ color: 'var(--oc-gold)' }}>{student?.full_name || student?.email || t('coachStudentDetail.fallbackName')}</h1>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-5)', marginTop: 'var(--oc-space-4)' }}>
+        <AutoPlanBuilder studentId={studentId} trainerId={profile.id} />
         <RoutineSection studentId={studentId} trainerId={profile.id} />
         <Card>
           <h2 style={{ marginTop: 0 }}>{t('coachStudentDetail.workoutHistoryTitle')}</h2>

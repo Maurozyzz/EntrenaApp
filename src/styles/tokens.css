@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Oswald:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 :root {
   --oc-ink: #090d10;
@@ -12,8 +12,8 @@
   --oc-danger: #e5484d;
   --oc-success: #4fae6a;
 
-  --oc-font-display: 'Oswald', 'Montserrat', sans-serif;
-  --oc-font-body: 'Montserrat', -apple-system, sans-serif;
+  --oc-font-display: 'Barlow Condensed', sans-serif;
+  --oc-font-body: 'Manrope', sans-serif;
 
   --oc-radius: 16px;
   --oc-radius-sm: 10px;
@@ -57,8 +57,8 @@ body {
   background: var(--oc-ink);
   color: var(--oc-text);
   font-family: var(--oc-font-body);
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 16px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
@@ -104,7 +104,7 @@ h2,
 h3 {
   font-family: var(--oc-font-display);
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   margin: 0 0 var(--oc-space-2);
 }
 
