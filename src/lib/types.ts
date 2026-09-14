@@ -163,3 +163,126 @@ export interface Payment {
   receipt_path: string | null;
   created_at: string;
 }
+
+export type PlanVersionStatus = 'draft' | 'active' | 'archived';
+export type PlanSource = 'trainer' | 'rules' | 'ai' | 'student_request';
+
+export interface TrainingPlanVersion {
+  id: string;
+  student_id: string;
+  trainer_id: string;
+  version_number: number;
+  status: PlanVersionStatus;
+  source: PlanSource;
+  change_reason: string | null;
+  profile_snapshot: Record<string, unknown>;
+  created_at: string;
+  activated_at: string | null;
+}
+
+export interface TrainingPlanDay {
+  id: string;
+  plan_version_id: string;
+  day_number: number;
+  label: string;
+  is_rest_day: boolean;
+  session_minutes: number | null;
+}
+
+export interface TrainingPlanExercise {
+  id: string;
+  plan_day_id: string;
+  exercise_id: number;
+  order_index: number;
+  sets: number | null;
+  reps: string | null;
+  rest_seconds: number | null;
+  rir_target: number | null;
+  tempo: string | null;
+  load_target: number | null;
+  notes: string | null;
+  selection_reason: string | null;
+}
+
+export interface NutritionPlanVersion {
+  id: string;
+  student_id: string;
+  trainer_id: string;
+  version_number: number;
+  status: PlanVersionStatus;
+  source: PlanSource;
+  change_reason: string | null;
+  calories_target: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  profile_snapshot: Record<string, unknown>;
+  created_at: string;
+  activated_at: string | null;
+}
+
+export interface NutritionPlanMeal {
+  id: string;
+  plan_version_id: string;
+  order_index: number;
+  label: string;
+  scheduled_time: string | null;
+  notes: string | null;
+}
+
+export interface NutritionPlanItem {
+  id: string;
+  meal_id: string;
+  food_id: number;
+  quantity: number;
+  unit: 'g' | 'ml' | 'unit';
+  alternative_group: string | null;
+  notes: string | null;
+}
+
+export interface PlanFeedback {
+  id: string;
+  student_id: string;
+  trainer_id: string | null;
+  training_plan_version_id: string | null;
+  nutrition_plan_version_id: string | null;
+  feedback_date: string;
+  difficulty: number | null;
+  energy: number | null;
+  pain_level: number | null;
+  adherence_pct: number | null;
+  liked: string | null;
+  disliked: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export type AdaptationScope = 'training' | 'nutrition' | 'both';
+export type AdaptationStatus = 'pending' | 'reviewed' | 'applied' | 'rejected';
+
+export interface AdaptationRequest {
+  id: string;
+  student_id: string;
+  trainer_id: string | null;
+  request_text: string;
+  scope: AdaptationScope;
+  status: AdaptationStatus;
+  parsed_action: Record<string, unknown> | null;
+  resolution_notes: string | null;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export type MemorySource = 'manual' | 'feedback' | 'request' | 'ai';
+
+export interface StudentMemory {
+  id: string;
+  student_id: string;
+  memory_key: string;
+  memory_value: string;
+  source: MemorySource;
+  confidence: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
