@@ -942,6 +942,19 @@ create index if not exists workout_logs_student_performed_idx
   on public.workout_logs (student_id, performed_at desc);
 
 -- =========================================================================
+-- ALIMENTOS CARGADOS POR ALUMNOS: siempre queda registrado quién los cargó
+-- (created_by se completa solo y no se puede falsear), así el entrenador
+-- puede revisar o borrar un alimento con macros mal cargados.
+-- =========================================================================
+
+alter table public.foods alter column created_by set default auth.uid();
+
+drop policy if exists "foods_insert_any" on public.foods;
+create policy "foods_insert_any" on public.foods
+  for insert to authenticated
+  with check (created_by = (select auth.uid()));
+
+-- =========================================================================
 -- Cómo usar este script
 -- =========================================================================
 -- 1. Dashboard de Supabase -> tu proyecto -> SQL Editor -> pegar todo este
