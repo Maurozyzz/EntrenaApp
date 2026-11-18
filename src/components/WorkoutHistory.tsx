@@ -88,7 +88,10 @@ export function WorkoutHistory({ studentId }: { studentId: string }) {
               </strong>
               <span style={{ color: 'var(--oc-text-muted)' }}>
                 {' '}
-                {t('workoutHistory.setsLine', { sets: log.sets_completed ?? '—' })}{' '}
+                {log.sets_completed && log.sets_completed > 1
+                  ? `${t('workoutHistory.setsLine', { sets: log.sets_completed })} `
+                  : ''}
+                {log.reps_completed ? `${t('workoutHistory.repsSuffix', { reps: log.reps_completed })} ` : ''}
                 {log.weight_used ? t('workoutHistory.weightSuffix', { weight: log.weight_used }) : ''}
               </span>
             </span>

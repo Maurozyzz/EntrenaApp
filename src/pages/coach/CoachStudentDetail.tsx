@@ -15,6 +15,7 @@ import { WorkoutHistory } from '../../components/WorkoutHistory';
 import { COACH_NAV } from './nav';
 import { DAYS, dayLabel, groupByDay, muscleGroupSummary } from '../../lib/days';
 import { translateExerciseName } from '../../lib/catalogTranslations';
+import { formatDate, formatMoney } from '../../lib/format';
 import type {
   Exercise,
   NutritionPlan,
@@ -367,7 +368,7 @@ function NutritionSection({ studentId, trainerId }: { studentId: string; trainer
 }
 
 function PaymentsSection({ studentId }: { studentId: string }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
@@ -466,10 +467,9 @@ function PaymentsSection({ studentId }: { studentId: string }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--oc-space-3)', flexWrap: 'wrap' }}>
                 <span>
                   {t('coachStudentDetail.rangeLine', {
-                    start: payment.period_start,
-                    end: payment.period_end,
-                    amount: payment.amount,
-                    currency: payment.currency,
+                    start: formatDate(payment.period_start, lang),
+                    end: formatDate(payment.period_end, lang),
+                    amount: formatMoney(payment.amount, payment.currency, lang),
                   })}
                 </span>
                 {receiptUrls[payment.id] && (
