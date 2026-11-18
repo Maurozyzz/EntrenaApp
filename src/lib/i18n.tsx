@@ -20,6 +20,8 @@ const es: Dict = {
   'common.cancel': 'Cancelar',
   'common.add': 'Agregar',
   'common.none': '—',
+  'common.saveFailed': 'No se pudo guardar: {{message}}',
+  'common.loadFailed': 'No se pudieron cargar los datos: {{message}}',
 
   'nav.students': 'Alumnos',
   'nav.exercises': 'Ejercicios',
@@ -51,6 +53,9 @@ const es: Dict = {
     'Cuenta creada. Si tu proyecto de Supabase pide confirmación por email, revisá tu casilla y después iniciá sesión.',
   'login.toSignup': '¿No tenés cuenta? Registrate',
   'login.toSignin': '¿Ya tenés cuenta? Ingresá',
+  'login.inviteCode': 'Código de invitación',
+  'login.inviteHint': 'Te lo pasa tu entrenador. Si entraste desde su link, ya está completo.',
+  'login.inviteInvalid': 'El código de invitación no es válido, ya se usó o venció. Pedile uno nuevo a tu entrenador.',
 
   'studentHome.greeting': 'Hola{{name}}',
   'studentHome.activeRoutine': 'Rutina activa',
@@ -162,7 +167,7 @@ const es: Dict = {
 
   'coachStudents.title': 'Alumnos',
   'coachStudents.howToAdd':
-    'Para sumar un alumno nuevo, pedile que se registre desde la pantalla de login con su propio email — queda vinculado a vos automáticamente.',
+    'Para sumar un alumno, tocá "Invitar alumno" y mandale el link. Solo puede registrarse quien tenga una invitación tuya.',
   'coachStudents.noStudents': 'Todavía no tenés alumnos registrados.',
   'coachStudents.noName': 'Sin nombre',
   'coachStudents.view': 'Ver →',
@@ -175,6 +180,13 @@ const es: Dict = {
   'coachStudents.noRoutineBadge': 'Sin rutina',
   'coachStudents.neverLogged': 'Nunca registró una serie',
   'coachStudents.inactiveDays': 'Inactivo hace {{days}} días',
+  'coachStudents.invite': 'Invitar alumno',
+  'coachStudents.inviting': 'Creando invitación…',
+  'coachStudents.inviteReady': 'Mandale este link a tu alumno. Sirve para una sola cuenta y vence en 14 días.',
+  'coachStudents.copy': 'Copiar link',
+  'coachStudents.copied': 'Link copiado',
+  'coachStudents.shareWhatsapp': 'Mandar por WhatsApp',
+  'coachStudents.inviteMessage': 'Te invito a Origen Coaching. Creá tu cuenta acá: {{link}}',
 
   'coachExercises.title': 'Ejercicios',
   'coachExercises.intro': 'Ya viene precargado con un catálogo amplio de ejercicios comunes — sumá acá los que te falten.',
@@ -336,6 +348,8 @@ const en: Dict = {
   'common.cancel': 'Cancel',
   'common.add': 'Add',
   'common.none': '—',
+  'common.saveFailed': 'Could not save: {{message}}',
+  'common.loadFailed': 'Could not load data: {{message}}',
 
   'nav.students': 'Students',
   'nav.exercises': 'Exercises',
@@ -367,6 +381,9 @@ const en: Dict = {
     'Account created. If your Supabase project requires email confirmation, check your inbox and then sign in.',
   'login.toSignup': "Don't have an account? Sign up",
   'login.toSignin': 'Already have an account? Sign in',
+  'login.inviteCode': 'Invite code',
+  'login.inviteHint': 'Your coach gives it to you. If you came from their link, it is already filled in.',
+  'login.inviteInvalid': 'The invite code is not valid, was already used or expired. Ask your coach for a new one.',
 
   'studentHome.greeting': 'Hi{{name}}',
   'studentHome.activeRoutine': 'Active routine',
@@ -479,7 +496,7 @@ const en: Dict = {
 
   'coachStudents.title': 'Students',
   'coachStudents.howToAdd':
-    'To add a new student, have them sign up from the login screen with their own email — they get linked to you automatically.',
+    'To add a student, tap "Invite student" and send them the link. Only people you invite can sign up.',
   'coachStudents.noStudents': "You don't have any students registered yet.",
   'coachStudents.noName': 'No name',
   'coachStudents.view': 'View →',
@@ -492,6 +509,13 @@ const en: Dict = {
   'coachStudents.noRoutineBadge': 'No routine',
   'coachStudents.neverLogged': 'Never logged a set',
   'coachStudents.inactiveDays': 'Inactive for {{days}} days',
+  'coachStudents.invite': 'Invite student',
+  'coachStudents.inviting': 'Creating invite…',
+  'coachStudents.inviteReady': 'Send this link to your student. It works for one account and expires in 14 days.',
+  'coachStudents.copy': 'Copy link',
+  'coachStudents.copied': 'Link copied',
+  'coachStudents.shareWhatsapp': 'Send via WhatsApp',
+  'coachStudents.inviteMessage': 'Join me on Origen Coaching. Create your account here: {{link}}',
 
   'coachExercises.title': 'Exercises',
   'coachExercises.intro': "It comes preloaded with a wide catalog of common exercises — add here the ones you're missing.",

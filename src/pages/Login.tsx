@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { useLanguage } from '../lib/i18n';
 import { Card } from '../components/ui/Card';
@@ -10,7 +10,10 @@ import { Field, Input } from '../components/ui/Input';
 export function Login() {
   const { session, loading, signIn, signUp } = useAuth();
   const { t, lang, toggleLang } = useLanguage();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [searchParams] = useSearchParams();
+  const inviteFromLink = searchParams.get('invitacion') ?? '';
+  const [mode, setMode] = useState<'login' | 'signup'>(inviteFromLink ? 'signup' : 'login');
+  const [inviteCode, setInviteCode] = useState(inviteFromLink);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -26,10 +29,12 @@ export function Login() {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    const result = mode === 'login' ? await signIn(email, password) : await signUp(email, password, fullName);
+    const result =
+      mode === 'login' ? await signIn(email, password) : await signUp(email, password, fullName, inviteCode);
     setSubmitting(false);
     if (result.error) {
-      setError(result.error);
+      // El rechazo del trigger llega como un error genérico de base de datos.
+      setError(mode === 'signup' && /database error/i.test(result.error) ? t('login.inviteInvalid') : result.error);
     } else if (mode === 'signup') {
       setSignupDone(true);
     }
@@ -93,9 +98,21 @@ export function Login() {
             style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-4)', marginTop: 'var(--oc-space-4)' }}
           >
             {mode === 'signup' && (
-              <Field label={t('login.name')}>
-                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-              </Field>
+              <>
+                <Field label={t('login.inviteCode')}>
+                  <Input
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value)}
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    required
+                  />
+                </Field>
+                <p style={{ color: 'var(--oc-text-muted)', fontSize: 12, margin: '-8px 0 0' }}>{t('login.inviteHint')}</p>
+                <Field label={t('login.name')}>
+                  <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                </Field>
+              </>
             )}
             <Field label={t('login.email')}>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />

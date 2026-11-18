@@ -261,20 +261,30 @@ export async function activateNutritionVersion(client: Client, versionId: string
 
 // Cambio pequeño: reemplaza un ejercicio puntual dentro del día de la versión
 // activa, sin crear una versión nueva (regla de "cambios pequeños vs grandes").
-export async function applyExerciseReplacement(client: Client, change: ExerciseReplacementChange, trainerId: string): Promise<Result<true>> {
+// studentId: el alumno dueño del plan. Se verifica además del entrenador para
+// que un alumno no pueda tocar el plan de otro alumno del mismo entrenador
+// (el cliente de la Edge Function usa service role y no pasa por RLS).
+export async function applyExerciseReplacement(
+  client: Client,
+  change: ExerciseReplacementChange,
+  trainerId: string,
+  studentId: string,
+): Promise<Result<true>> {
   if (!(await exerciseIdsExist(client, [change.replacement_exercise_id]))) {
     return err('El ejercicio de reemplazo no existe en el catálogo.');
   }
 
   const { data: day, error: dayError } = await client
     .from('training_plan_days')
-    .select('id, training_plan_versions!inner(trainer_id, status)')
+    .select('id, training_plan_versions!inner(trainer_id, student_id, status)')
     .eq('id', change.plan_day_id)
     .single();
   if (dayError || !day) return err('El día del plan no existe.');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const version = (day as any).training_plan_versions;
-  if (version?.trainer_id !== trainerId) return err('No autorizado para modificar este plan.');
+  if (version?.trainer_id !== trainerId || version?.student_id !== studentId) {
+    return err('No autorizado para modificar este plan.');
+  }
 
   const { data: updated, error } = await client
     .from('training_plan_exercises')
@@ -288,20 +298,30 @@ export async function applyExerciseReplacement(client: Client, change: ExerciseR
 }
 
 // Cambio pequeño equivalente para alimentos dentro de una comida.
-export async function applyFoodReplacement(client: Client, change: FoodReplacementChange, trainerId: string): Promise<Result<true>> {
+// studentId: el alumno dueño del plan. Se verifica además del entrenador para
+// que un alumno no pueda tocar el plan de otro alumno del mismo entrenador
+// (el cliente de la Edge Function usa service role y no pasa por RLS).
+export async function applyFoodReplacement(
+  client: Client,
+  change: FoodReplacementChange,
+  trainerId: string,
+  studentId: string,
+): Promise<Result<true>> {
   if (!(await foodIdsExist(client, [change.replacement_food_id]))) {
     return err('El alimento de reemplazo no existe en el catálogo.');
   }
 
   const { data: meal, error: mealError } = await client
     .from('nutrition_plan_meals')
-    .select('id, nutrition_plan_versions!inner(trainer_id, status)')
+    .select('id, nutrition_plan_versions!inner(trainer_id, student_id, status)')
     .eq('id', change.meal_id)
     .single();
   if (mealError || !meal) return err('La comida del plan no existe.');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const version = (meal as any).nutrition_plan_versions;
-  if (version?.trainer_id !== trainerId) return err('No autorizado para modificar este plan.');
+  if (version?.trainer_id !== trainerId || version?.student_id !== studentId) {
+    return err('No autorizado para modificar este plan.');
+  }
 
   const update: Record<string, unknown> = { food_id: change.replacement_food_id };
   if (change.quantity !== undefined) update.quantity = change.quantity;

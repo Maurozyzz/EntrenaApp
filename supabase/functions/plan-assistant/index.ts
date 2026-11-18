@@ -229,10 +229,10 @@ Deno.serve(async (req) => {
 
     for (const change of proposal.changes) {
       if (change.type === 'exercise_replacement') {
-        const result = await applyExerciseReplacement(supabase, change, trainerId);
+        const result = await applyExerciseReplacement(supabase, change, trainerId, studentId);
         if (result.error) changeErrors.push(result.error.message); else applied = true;
       } else if (change.type === 'food_replacement') {
-        const result = await applyFoodReplacement(supabase, change, trainerId);
+        const result = await applyFoodReplacement(supabase, change, trainerId, studentId);
         if (result.error) changeErrors.push(result.error.message); else applied = true;
       }
     }

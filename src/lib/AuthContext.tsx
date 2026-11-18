@@ -14,7 +14,7 @@ interface AuthContextValue {
   profileError: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<AuthResult>;
-  signUp: (email: string, password: string, fullName: string) => Promise<AuthResult>;
+  signUp: (email: string, password: string, fullName: string, inviteCode: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
 }
 
@@ -73,11 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   }
 
-  async function signUp(email: string, password: string, fullName: string): Promise<AuthResult> {
+  async function signUp(email: string, password: string, fullName: string, inviteCode: string): Promise<AuthResult> {
+    // El trigger handle_new_user() valida el código: sin invitación válida
+    // Supabase rechaza el alta ("Database error saving new user").
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName, invite_code: inviteCode.trim().toUpperCase() } },
     });
     return { error: error?.message ?? null };
   }

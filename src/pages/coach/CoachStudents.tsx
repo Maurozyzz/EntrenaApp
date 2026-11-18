@@ -6,6 +6,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { useLanguage } from '../../lib/i18n';
 import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 import { COACH_NAV } from './nav';
 import type { Profile } from '../../lib/types';
 
@@ -29,6 +30,11 @@ export function CoachStudents() {
   const [alerts, setAlerts] = useState<Record<string, StudentAlerts>>({});
   const [loading, setLoading] = useState(true);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
@@ -39,11 +45,17 @@ export function CoachStudents() {
   async function load() {
     if (!profile) return;
     setLoading(true);
-    const { data: studentRows } = await supabase
+    setLoadError(null);
+    const { data: studentRows, error: studentsErr } = await supabase
       .from('profiles')
       .select('*')
       .eq('trainer_id', profile.id)
       .order('created_at', { ascending: false });
+    if (studentsErr) {
+      setLoadError(studentsErr.message);
+      setLoading(false);
+      return;
+    }
     const rows = studentRows ?? [];
     setStudents(rows);
 
@@ -53,20 +65,22 @@ export function CoachStudents() {
     }
 
     const ids = rows.map((s) => s.id);
-    const [{ data: routines }, { data: logs }, { data: payments }] = await Promise.all([
+    // last_workout_by_student devuelve una fila por alumno (su último
+    // entrenamiento) en vez de bajar todo el historial de workout_logs.
+    const [routinesRes, logsRes, paymentsRes] = await Promise.all([
       supabase.from('routines').select('student_id').eq('active', true).in('student_id', ids),
-      supabase
-        .from('workout_logs')
-        .select('student_id, performed_at')
-        .in('student_id', ids)
-        .order('performed_at', { ascending: false }),
+      supabase.rpc('last_workout_by_student', { student_ids: ids }),
       supabase.from('payments').select('student_id, status, period_end').in('student_id', ids),
     ]);
+    const firstError = routinesRes.error ?? logsRes.error ?? paymentsRes.error;
+    if (firstError) setLoadError(firstError.message);
+    const routines = routinesRes.data;
+    const payments = paymentsRes.data;
 
     const hasRoutine = new Set((routines ?? []).map((r) => r.student_id));
     const lastWorkout = new Map<string, string>();
-    for (const log of logs ?? []) {
-      if (!lastWorkout.has(log.student_id)) lastWorkout.set(log.student_id, log.performed_at);
+    for (const row of (logsRes.data ?? []) as { student_id: string; last_performed_at: string }[]) {
+      lastWorkout.set(row.student_id, row.last_performed_at);
     }
     const today = new Date().toISOString().slice(0, 10);
     const overdue = new Set(
@@ -83,6 +97,34 @@ export function CoachStudents() {
     }
     setAlerts(nextAlerts);
     setLoading(false);
+  }
+
+  async function createInvite() {
+    if (!profile) return;
+    setInviting(true);
+    setInviteError(null);
+    setCopied(false);
+    const { data, error } = await supabase
+      .from('trainer_invites')
+      .insert({ trainer_id: profile.id })
+      .select('code')
+      .single();
+    setInviting(false);
+    if (error || !data) {
+      setInviteError(t('common.saveFailed', { message: error?.message ?? '' }));
+      return;
+    }
+    setInviteLink(`${window.location.origin}/login?invitacion=${data.code}`);
+  }
+
+  async function copyInvite() {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
   }
 
   async function removeStudent(student: Profile) {
@@ -105,6 +147,36 @@ export function CoachStudents() {
     <AppShell links={COACH_NAV}>
       <h1 style={{ color: 'var(--oc-gold)' }}>{t('coachStudents.title')}</h1>
       <p style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>{t('coachStudents.howToAdd')}</p>
+
+      <Card style={{ marginTop: 'var(--oc-space-3)' }}>
+        <Button onClick={createInvite} disabled={inviting}>
+          {inviting ? t('coachStudents.inviting') : t('coachStudents.invite')}
+        </Button>
+        {inviteError && <p style={{ color: 'var(--oc-danger)', fontSize: 13 }}>{inviteError}</p>}
+        {inviteLink && (
+          <div style={{ marginTop: 'var(--oc-space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-2)' }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--oc-text-muted)' }}>{t('coachStudents.inviteReady')}</p>
+            <code style={{ fontSize: 13, wordBreak: 'break-all', color: 'var(--oc-gold)' }}>{inviteLink}</code>
+            <div style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap' }}>
+              <Button variant="secondary" onClick={copyInvite}>
+                {copied ? t('coachStudents.copied') : t('coachStudents.copy')}
+              </Button>
+              <a
+                className="oc-button oc-button--ghost"
+                href={`https://wa.me/?text=${encodeURIComponent(t('coachStudents.inviteMessage', { link: inviteLink }))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t('coachStudents.shareWhatsapp')}
+              </a>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {loadError && (
+        <p style={{ color: 'var(--oc-danger)', fontSize: 13 }}>{t('common.loadFailed', { message: loadError })}</p>
+      )}
 
       {loading ? (
         <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>
