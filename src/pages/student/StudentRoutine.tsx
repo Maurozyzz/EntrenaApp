@@ -27,6 +27,7 @@ export function StudentRoutine() {
   const [weightUsed, setWeightUsed] = useState('');
   const [saving, setSaving] = useState(false);
   const [historyKey, setHistoryKey] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -61,13 +62,19 @@ export function StudentRoutine() {
     e.preventDefault();
     if (!profile) return;
     setSaving(true);
-    await supabase.from('workout_logs').insert({
+    setError(null);
+    const { error: insertErr } = await supabase.from('workout_logs').insert({
       student_id: profile.id,
       routine_exercise_id: routineExerciseId,
       sets_completed: setsCompleted ? Number(setsCompleted) : null,
       weight_used: weightUsed ? Number(weightUsed) : null,
     });
     setSaving(false);
+    if (insertErr) {
+      // Se deja el formulario abierto con lo que cargó para que pueda reintentar.
+      setError(t('common.saveFailed', { message: insertErr.message }));
+      return;
+    }
     setLogging(null);
     setSetsCompleted('');
     setWeightUsed('');
@@ -112,6 +119,9 @@ export function StudentRoutine() {
                       {item.rest_seconds ? t('routine.restSuffix', { sec: item.rest_seconds }) : ''}
                     </p>
 
+                    {logging === item.id && error && (
+                      <p style={{ color: 'var(--oc-danger)', fontSize: 13, marginBottom: 0 }}>{error}</p>
+                    )}
                     {logging === item.id ? (
                       <form
                         onSubmit={(e) => logWorkout(e, item.id)}
@@ -130,13 +140,13 @@ export function StudentRoutine() {
                         <Button type="submit" disabled={saving}>
                           {saving ? t('common.saving') : t('routine.save')}
                         </Button>
-                        <Button type="button" variant="ghost" onClick={() => setLogging(null)}>
+                        <Button type="button" variant="ghost" onClick={() => { setLogging(null); setError(null); }}>
                           {t('common.cancel')}
                         </Button>
                       </form>
                     ) : (
                       <div style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', marginTop: 'var(--oc-space-3)' }}>
-                        <Button variant="secondary" onClick={() => setLogging(item.id)}>
+                        <Button variant="secondary" onClick={() => { setLogging(item.id); setError(null); }}>
                           {t('routine.logSet')}
                         </Button>
                         {selectedId === item.id && item.exercises?.name && (

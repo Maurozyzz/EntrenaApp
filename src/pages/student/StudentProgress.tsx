@@ -26,6 +26,7 @@ export function StudentProgress() {
   const [weightKg, setWeightKg] = useState('');
   const [waistCm, setWaistCm] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const metricLabels: Record<Metric, { label: string; unit: string }> = {
     weight_kg: { label: t('progress.weight'), unit: 'kg' },
@@ -82,11 +83,17 @@ export function StudentProgress() {
     e.preventDefault();
     if (!profile) return;
     setSaving(true);
-    await supabase.from('body_measurements').insert({
+    setError(null);
+    const { error: insertErr } = await supabase.from('body_measurements').insert({
       student_id: profile.id,
       weight_kg: weightKg ? Number(weightKg) : null,
       waist_cm: waistCm ? Number(waistCm) : null,
     });
+    if (insertErr) {
+      setSaving(false);
+      setError(t('common.saveFailed', { message: insertErr.message }));
+      return;
+    }
     setWeightKg('');
     setWaistCm('');
     setSaving(false);
@@ -118,6 +125,7 @@ export function StudentProgress() {
             {saving ? t('common.saving') : t('progress.logMeasurement')}
           </Button>
         </form>
+        {error && <p style={{ color: 'var(--oc-danger)', fontSize: 13, marginBottom: 0 }}>{error}</p>}
       </Card>
 
       {!loading && measurements.length > 0 && (

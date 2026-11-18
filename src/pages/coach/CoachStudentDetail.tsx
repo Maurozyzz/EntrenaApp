@@ -98,11 +98,16 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
   }, [studentId]);
 
   async function createRoutine() {
-    await supabase.from('routines').insert({
+    setError(null);
+    const { error: insertErr } = await supabase.from('routines').insert({
       student_id: studentId,
       trainer_id: trainerId,
       name: 'Rutina activa',
     });
+    if (insertErr) {
+      setError(t('common.saveFailed', { message: insertErr.message }));
+      return;
+    }
     load();
   }
 
@@ -261,6 +266,7 @@ function NutritionSection({ studentId, trainerId }: { studentId: string; trainer
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -287,23 +293,26 @@ function NutritionSection({ studentId, trainerId }: { studentId: string; trainer
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setError(null);
     const payload = {
       calories_target: calories ? Number(calories) : null,
       protein_g: protein ? Number(protein) : null,
       carbs_g: carbs ? Number(carbs) : null,
       fat_g: fat ? Number(fat) : null,
     };
-    if (plan) {
-      await supabase.from('nutrition_plans').update(payload).eq('id', plan.id);
-    } else {
-      await supabase.from('nutrition_plans').insert({
-        student_id: studentId,
-        trainer_id: trainerId,
-        name: 'Plan nutricional',
-        ...payload,
-      });
-    }
+    const { error: saveErr } = plan
+      ? await supabase.from('nutrition_plans').update(payload).eq('id', plan.id)
+      : await supabase.from('nutrition_plans').insert({
+          student_id: studentId,
+          trainer_id: trainerId,
+          name: 'Plan nutricional',
+          ...payload,
+        });
     setSaving(false);
+    if (saveErr) {
+      setError(t('common.saveFailed', { message: saveErr.message }));
+      return;
+    }
     load();
   }
 
@@ -319,6 +328,7 @@ function NutritionSection({ studentId, trainerId }: { studentId: string; trainer
   return (
     <Card>
       <h2 style={{ marginTop: 0 }}>{t('coachStudentDetail.dietTitle')}</h2>
+      {error && <p style={{ color: 'var(--oc-danger)', fontSize: 13 }}>{error}</p>}
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ width: 100 }}>
           <Field label={t('coachStudentDetail.caloriesLabel')}>
@@ -365,6 +375,7 @@ function PaymentsSection({ studentId }: { studentId: string }) {
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -399,12 +410,18 @@ function PaymentsSection({ studentId }: { studentId: string }) {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
-    await supabase.from('payments').insert({
+    setError(null);
+    const { error: insertErr } = await supabase.from('payments').insert({
       student_id: studentId,
       amount: Number(amount),
       period_start: periodStart,
       period_end: periodEnd,
     });
+    if (insertErr) {
+      setSaving(false);
+      setError(t('common.saveFailed', { message: insertErr.message }));
+      return;
+    }
     setAmount('');
     setPeriodStart('');
     setPeriodEnd('');
@@ -413,13 +430,22 @@ function PaymentsSection({ studentId }: { studentId: string }) {
   }
 
   async function markPaid(id: number) {
-    await supabase.from('payments').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', id);
+    setError(null);
+    const { error: updateErr } = await supabase
+      .from('payments')
+      .update({ status: 'paid', paid_at: new Date().toISOString() })
+      .eq('id', id);
+    if (updateErr) {
+      setError(t('common.saveFailed', { message: updateErr.message }));
+      return;
+    }
     load();
   }
 
   return (
     <Card>
       <h2 style={{ marginTop: 0 }}>{t('coachStudentDetail.paymentsTitle')}</h2>
+      {error && <p style={{ color: 'var(--oc-danger)', fontSize: 13 }}>{error}</p>}
 
       {loading ? (
         <p style={{ color: 'var(--oc-text-muted)' }}>{t('common.loading')}</p>
