@@ -1,0 +1,252 @@
+/* Modo entrenamiento del alumno: un día por vez, serie por serie. */
+.oc-workout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--oc-space-4);
+  padding-bottom: 96px; /* lugar para el cronómetro de descanso */
+}
+
+.oc-workout__eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--oc-energy);
+}
+
+.oc-workout__title {
+  color: var(--oc-gold);
+  margin: 2px 0 0;
+  text-wrap: balance;
+}
+
+.oc-workout__days {
+  display: flex;
+  gap: var(--oc-space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 calc(var(--oc-space-5) * -1);
+  padding: 2px var(--oc-space-5);
+}
+.oc-workout__days::-webkit-scrollbar { display: none; }
+
+.oc-workout__day {
+  flex: none;
+  border: 1px solid var(--oc-border);
+  background: var(--oc-ink);
+  color: var(--oc-text-muted);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font: 700 13px var(--oc-font-body);
+  cursor: pointer;
+}
+.oc-workout__day--on {
+  background: var(--oc-gold);
+  border-color: var(--oc-gold);
+  color: var(--oc-ink);
+}
+
+.oc-workout__progress {
+  height: 8px;
+  border-radius: 999px;
+  background: #0b1013;
+  box-shadow: var(--oc-shadow-inset);
+  overflow: hidden;
+}
+.oc-workout__progress > div {
+  height: 100%;
+  background: var(--oc-energy);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.oc-workout__count {
+  margin: var(--oc-space-2) 0 0;
+  font-size: 13px;
+  color: var(--oc-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.oc-workout__record {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--oc-space-3);
+  padding: var(--oc-space-3) var(--oc-space-4);
+  border-radius: var(--oc-radius-sm);
+  background: rgba(217, 183, 92, 0.12);
+  border: 1px solid rgba(217, 183, 92, 0.45);
+  color: var(--oc-gold);
+  font-weight: 700;
+  font-size: 14px;
+}
+.oc-workout__record button {
+  background: none;
+  border: none;
+  color: var(--oc-gold);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.oc-workout__ex--done { opacity: 0.7; }
+
+.oc-workout__ex-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--oc-space-3);
+}
+
+.oc-workout__meta {
+  margin: var(--oc-space-1) 0 0;
+  font-size: 13px;
+  color: var(--oc-text-muted);
+}
+
+.oc-workout__note {
+  margin: var(--oc-space-2) 0 0;
+  font-size: 13px;
+  color: var(--oc-gold);
+}
+
+.oc-workout__video {
+  flex: none;
+  color: var(--oc-gold);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.oc-sets {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1fr) 44px;
+  max-width: 520px;
+  gap: var(--oc-space-2);
+  align-items: center;
+  margin-top: var(--oc-space-3);
+}
+.oc-sets__row { display: contents; }
+.oc-sets__h {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--oc-text-muted);
+}
+.oc-sets__n {
+  font-weight: 800;
+  color: var(--oc-text-muted);
+  text-align: center;
+}
+.oc-sets__input,
+.oc-sets__val {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: #0b1013;
+  box-shadow: var(--oc-shadow-inset);
+  color: var(--oc-text);
+  font: 700 16px var(--oc-font-body); /* 16px: iOS no hace zoom al tocar */
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.oc-sets__input:focus { outline: none; border-color: var(--oc-gold); }
+.oc-sets__row--done .oc-sets__val { color: var(--oc-energy); background: rgba(183, 255, 55, 0.06); }
+.oc-sets__check {
+  width: 44px;
+  height: 40px;
+  border-radius: 10px;
+  border: 2px solid var(--oc-border);
+  background: transparent;
+  color: var(--oc-ink);
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.oc-sets__check:disabled { cursor: default; opacity: 0.45; }
+.oc-sets__check--on {
+  background: var(--oc-energy);
+  border-color: var(--oc-energy);
+}
+.oc-sets__check--on:disabled { opacity: 1; }
+.oc-sets__check:focus-visible,
+.oc-workout__day:focus-visible,
+.oc-chip:focus-visible { outline: 2px solid var(--oc-energy); outline-offset: 2px; }
+
+.oc-workout__ex-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--oc-space-3);
+  margin-top: var(--oc-space-3);
+  flex-wrap: wrap;
+}
+.oc-workout__prev { font-size: 12px; color: var(--oc-text-muted); }
+.oc-workout__add {
+  background: none;
+  border: none;
+  color: var(--oc-gold);
+  font: 700 13px var(--oc-font-body);
+  cursor: pointer;
+  padding: 0;
+}
+
+.oc-rest {
+  position: fixed;
+  left: var(--oc-space-4);
+  right: var(--oc-space-4);
+  bottom: calc(var(--oc-space-4) + var(--oc-tabbar-height, 0px) + env(safe-area-inset-bottom, 0px));
+  max-width: 560px;
+  margin: 0 auto;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--oc-space-3);
+  padding: var(--oc-space-3) var(--oc-space-4);
+  border-radius: var(--oc-radius);
+  background: var(--oc-energy);
+  color: var(--oc-ink);
+  font-weight: 800;
+  box-shadow: 0 12px 32px rgba(183, 255, 55, 0.3);
+}
+.oc-rest strong {
+  flex: 1;
+  font-family: var(--oc-font-display);
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+}
+.oc-rest button {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--oc-ink);
+  color: var(--oc-energy);
+  font: 800 13px var(--oc-font-body);
+  cursor: pointer;
+}
+
+.oc-feedback { display: flex; flex-direction: column; gap: var(--oc-space-3); }
+.oc-feedback__group { display: flex; flex-direction: column; gap: var(--oc-space-2); }
+.oc-feedback__label { font-size: 12px; color: var(--oc-text-muted); font-weight: 700; }
+.oc-feedback__chips { display: flex; gap: var(--oc-space-2); flex-wrap: wrap; }
+.oc-chip {
+  border: 1px solid var(--oc-border);
+  background: transparent;
+  color: var(--oc-text-muted);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font: 700 13px var(--oc-font-body);
+  cursor: pointer;
+}
+.oc-chip--on { border-color: var(--oc-gold); color: var(--oc-ink); background: var(--oc-gold); }
+.oc-feedback__pain { display: flex; gap: var(--oc-space-2); align-items: center; font-size: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .oc-workout__progress > div { transition: none; }
+}

@@ -12,6 +12,7 @@ import { ProgressLineChart } from '../../components/ProgressLineChart';
 import { BeforeAfterSlider } from '../../components/BeforeAfterSlider';
 import { STUDENT_NAV } from './nav';
 import type { BodyMeasurement } from '../../lib/types';
+import { formatDate } from '../../lib/format';
 
 const PHOTOS_BUCKET = 'progress-photos';
 
@@ -19,7 +20,7 @@ type Metric = 'weight_kg' | 'waist_cm';
 
 export function StudentProgress() {
   const { profile } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [metric, setMetric] = useState<Metric>('weight_kg');
@@ -150,7 +151,7 @@ export function StudentProgress() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-2)' }}>
           {measurements.map((m) => (
             <Card key={m.id} style={{ padding: 'var(--oc-space-3) var(--oc-space-4)' }}>
-              <strong>{m.measured_at}</strong>
+              <strong>{formatDate(m.measured_at, lang)}</strong>
               <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>
                 {' '}
                 {m.weight_kg ? `· ${m.weight_kg}kg` : ''} {m.waist_cm ? t('progress.waistSuffix', { cm: m.waist_cm }) : ''}

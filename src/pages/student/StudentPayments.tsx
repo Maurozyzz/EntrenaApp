@@ -8,12 +8,13 @@ import { Card } from '../../components/ui/Card';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { STUDENT_NAV } from './nav';
 import type { Payment } from '../../lib/types';
+import { formatDate, formatMoney } from '../../lib/format';
 
 const RECEIPTS_BUCKET = 'payment-receipts';
 
 export function StudentPayments() {
   const { profile } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
@@ -91,10 +92,9 @@ export function StudentPayments() {
               <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--oc-space-2)' }}>
                 <span>
                   {t('payments.rangeLine', {
-                    start: payment.period_start,
-                    end: payment.period_end,
-                    amount: payment.amount,
-                    currency: payment.currency,
+                    start: formatDate(payment.period_start, lang),
+                    end: formatDate(payment.period_end, lang),
+                    amount: formatMoney(payment.amount, payment.currency, lang),
                   })}
                 </span>
                 <StatusPill status={payment.status} />

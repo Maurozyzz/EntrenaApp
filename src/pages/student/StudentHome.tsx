@@ -7,10 +7,11 @@ import { AppShell } from '../../components/layout/AppShell';
 import { Card } from '../../components/ui/Card';
 import { STUDENT_NAV } from './nav';
 import type { Payment, Routine } from '../../lib/types';
+import { formatDate, formatMoney } from '../../lib/format';
 
 export function StudentHome() {
   const { profile } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [routine, setRoutine] = useState<Routine | null>(null);
   const [nextPayment, setNextPayment] = useState<Payment | null>(null);
 
@@ -58,9 +59,8 @@ export function StudentHome() {
           <p style={{ color: 'var(--oc-text-muted)', marginTop: 'var(--oc-space-2)' }}>
             {nextPayment
               ? t('studentHome.dueLabel', {
-                  amount: nextPayment.amount,
-                  currency: nextPayment.currency,
-                  date: nextPayment.period_end,
+                  amount: formatMoney(nextPayment.amount, nextPayment.currency, lang),
+                  date: formatDate(nextPayment.period_end, lang),
                 })
               : t('studentHome.noPending')}
           </p>

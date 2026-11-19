@@ -64,3 +64,45 @@
   background: linear-gradient(150deg, #c9ff63 0%, #9fe62a 100%);
   box-shadow: var(--oc-shadow-raised-sm);
 }
+
+/* Barra de navegación de abajo: solo en pantallas angostas (celular). En
+   compu sigue el menú de arriba. Es un renglón más de la columna .oc-shell,
+   así no tapa contenido. */
+.oc-tabbar { display: none; }
+
+@media (max-width: 720px) {
+  .oc-shell { --oc-tabbar-height: 64px; }
+  .oc-nav,
+  .oc-header__user { display: none; }
+  .oc-header { padding: var(--oc-space-3) var(--oc-space-4); }
+  .oc-main__inner { padding: var(--oc-space-4); }
+
+  .oc-tabbar {
+    display: flex;
+    flex-shrink: 0;
+    justify-content: space-around;
+    min-height: var(--oc-tabbar-height);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: var(--oc-glass);
+    backdrop-filter: blur(20px) saturate(1.15);
+    -webkit-backdrop-filter: blur(20px) saturate(1.15);
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.4);
+    z-index: 10;
+  }
+  .oc-tabbar__link {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    color: var(--oc-text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: var(--oc-radius-sm);
+  }
+  .oc-tabbar__link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .oc-tabbar__link--active { color: var(--oc-energy); }
+}
