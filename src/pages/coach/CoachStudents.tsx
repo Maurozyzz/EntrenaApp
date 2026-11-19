@@ -22,6 +22,8 @@ interface StudentAlerts {
   paymentOverdue: boolean;
   overdueSince: string | null;
   reportedPain: boolean;
+  pendingRequests: number;
+  unreadMessages: number;
 }
 
 function daysSince(dateStr: string): number {
@@ -83,7 +85,7 @@ export function CoachStudents() {
     const painSince = new Date(Date.now() - PAIN_LOOKBACK_DAYS * 864e5).toISOString();
     // last_workout_by_student devuelve una fila por alumno (su último
     // entrenamiento) en vez de bajar todo el historial de workout_logs.
-    const [routinesRes, logsRes, paymentsRes, feedbackRes] = await Promise.all([
+    const [routinesRes, logsRes, paymentsRes, feedbackRes, requestsRes, unreadRes] = await Promise.all([
       supabase.from('routines').select('student_id').eq('active', true).in('student_id', ids),
       supabase.rpc('last_workout_by_student', { student_ids: ids }),
       supabase.from('payments').select('student_id, status, period_end, amount, currency, paid_at').in('student_id', ids),
@@ -93,6 +95,9 @@ export function CoachStudents() {
         .in('student_id', ids)
         .gt('pain_level', 0)
         .gte('created_at', painSince),
+      // Pedidos y mensajes: si la migración de la etapa 4 no se corrió, no hay alertas.
+      supabase.from('adaptation_requests').select('student_id').in('student_id', ids).eq('status', 'pending'),
+      supabase.from('messages').select('student_id').eq('trainer_id', profile.id).neq('sender_id', profile.id).is('read_at', null),
     ]);
     // plan_feedback puede no existir si no se corrió la migración de planes:
     // en ese caso simplemente no hay alertas de dolor.
@@ -121,6 +126,15 @@ export function CoachStudents() {
       currency: paidThisMonth[0]?.currency ?? payments[0]?.currency ?? 'ARS',
     });
 
+    const countBy = (rowsIn: { student_id: string }[] | null, failed: unknown) => {
+      const m = new Map<string, number>();
+      if (failed) return m;
+      for (const r of rowsIn ?? []) m.set(r.student_id, (m.get(r.student_id) ?? 0) + 1);
+      return m;
+    };
+    const pendingByStudent = countBy(requestsRes.data, requestsRes.error);
+    const unreadByStudent = countBy(unreadRes.data, unreadRes.error);
+
     const nextAlerts: Record<string, StudentAlerts> = {};
     for (const id of ids) {
       nextAlerts[id] = {
@@ -129,6 +143,8 @@ export function CoachStudents() {
         paymentOverdue: overdueSince.has(id),
         overdueSince: overdueSince.get(id) ?? null,
         reportedPain: pain.has(id),
+        pendingRequests: pendingByStudent.get(id) ?? 0,
+        unreadMessages: unreadByStudent.get(id) ?? 0,
       };
     }
     setAlerts(nextAlerts);
@@ -185,7 +201,12 @@ export function CoachStudents() {
   // Lo urgente primero: pago vencido, dolor, sin entrenar, sin rutina.
   const attention = useMemo(() => {
     const score = (a: StudentAlerts) =>
-      (a.paymentOverdue ? 8 : 0) + (a.reportedPain ? 4 : 0) + (isInactive(a) ? 2 : 0) + (!a.hasRoutine ? 1 : 0);
+      (a.paymentOverdue ? 8 : 0) +
+      (a.pendingRequests > 0 ? 5 : 0) +
+      (a.reportedPain ? 4 : 0) +
+      (a.unreadMessages > 0 ? 3 : 0) +
+      (isInactive(a) ? 2 : 0) +
+      (!a.hasRoutine ? 1 : 0);
     return students
       .map((s) => ({ student: s, a: alerts[s.id] }))
       .filter((x): x is { student: Profile; a: StudentAlerts } => Boolean(x.a) && score(x.a) > 0)
@@ -205,11 +226,13 @@ export function CoachStudents() {
     ? students.filter((s) => `${s.full_name ?? ''} ${s.email ?? ''}`.toLowerCase().includes(query))
     : students;
 
-  function reasonFor(a: StudentAlerts): { text: string; tone: 'danger' | 'warning' | 'muted' } {
+  function reasonFor(a: StudentAlerts): { text: string; tone: 'danger' | 'warning' | 'muted'; tab?: string } {
     if (a.paymentOverdue && a.overdueSince) {
-      return { text: t('coachDash.overdueFor', { days: Math.max(1, daysSince(a.overdueSince)) }), tone: 'danger' };
+      return { text: t('coachDash.overdueFor', { days: Math.max(1, daysSince(a.overdueSince)) }), tone: 'danger', tab: 'payments' };
     }
+    if (a.pendingRequests > 0) return { text: t('coachDash.requests', { n: a.pendingRequests }), tone: 'warning', tab: 'requests' };
     if (a.reportedPain) return { text: t('coachDash.pain'), tone: 'danger' };
+    if (a.unreadMessages > 0) return { text: t('coachDash.unread', { n: a.unreadMessages }), tone: 'warning', tab: 'chat' };
     if (isInactive(a)) {
       const days = inactiveDaysOf(a);
       return {
@@ -265,7 +288,7 @@ export function CoachStudents() {
                 const reason = reasonFor(a);
                 const name = student.full_name || student.email || t('coachStudents.noName');
                 return (
-                  <Link key={student.id} to={`/coach/alumnos/${student.id}`} className="oc-att">
+                  <Link key={student.id} to={`/coach/alumnos/${student.id}${reason.tab ? `?tab=${reason.tab}` : ''}`} className="oc-att">
                     <span className="oc-avatar">{initials(name)}</span>
                     <span className="oc-att__body">
                       <strong>{name}</strong>

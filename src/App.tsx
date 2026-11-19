@@ -11,6 +11,7 @@ import { StudentRoutine } from './pages/student/StudentRoutine';
 import { StudentProgress } from './pages/student/StudentProgress';
 import { StudentNutrition } from './pages/student/StudentNutrition';
 import { StudentPayments } from './pages/student/StudentPayments';
+import { StudentChat } from './pages/student/StudentChat';
 
 function RoleHome() {
   const { profile } = useAuth();
@@ -86,6 +87,14 @@ function App() {
           element={
             <RequireAuth role="student">
               <StudentNutrition />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/mi/chat"
+          element={
+            <RequireAuth role="student">
+              <StudentChat />
             </RequireAuth>
           }
         />

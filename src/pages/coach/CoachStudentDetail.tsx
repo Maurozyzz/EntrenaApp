@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../lib/AuthContext';
 import { useLanguage } from '../../lib/i18n';
@@ -17,11 +17,15 @@ import { DAYS, dayLabel, groupByDay, muscleGroupSummary } from '../../lib/days';
 import { translateExerciseName } from '../../lib/catalogTranslations';
 import { formatDate, formatMoney } from '../../lib/format';
 import { StudentSummary } from '../../components/StudentSummary';
+import { ChatThread } from '../../components/ChatThread';
+import { RequestsInbox } from '../../components/RequestsInbox';
 import '../coach/CoachStudents.css';
 
-type Tab = 'summary' | 'routine' | 'history' | 'diet' | 'payments' | 'auto';
+type Tab = 'summary' | 'requests' | 'chat' | 'routine' | 'history' | 'diet' | 'payments' | 'auto';
 const TABS: { id: Tab; key: string }[] = [
   { id: 'summary', key: 'coachDetail.tabSummary' },
+  { id: 'requests', key: 'coachDetail.tabRequests' },
+  { id: 'chat', key: 'coachDetail.tabChat' },
   { id: 'routine', key: 'coachDetail.tabRoutine' },
   { id: 'history', key: 'coachDetail.tabHistory' },
   { id: 'diet', key: 'coachDetail.tabDiet' },
@@ -44,7 +48,9 @@ export function CoachStudentDetail() {
   const { profile } = useAuth();
   const { t } = useLanguage();
   const [student, setStudent] = useState<Profile | null>(null);
-  const [tab, setTab] = useState<Tab>('summary');
+  const [searchParams] = useSearchParams();
+  const initialTab = TABS.find((x) => x.id === searchParams.get('tab'))?.id ?? 'summary';
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   useEffect(() => {
     if (!studentId) return;
@@ -79,6 +85,18 @@ export function CoachStudentDetail() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-5)' }}>
         {tab === 'summary' && <StudentSummary studentId={studentId} onGoTo={(next) => setTab(next as Tab)} />}
+        {tab === 'requests' && (
+          <Card>
+            <h2 style={{ marginTop: 0 }}>{t('coachDetail.tabRequests')}</h2>
+            <p style={{ marginTop: 0, color: 'var(--oc-text-muted)', fontSize: 13 }}>{t('requests.hint')}</p>
+            <RequestsInbox studentId={studentId} trainerId={profile.id} />
+          </Card>
+        )}
+        {tab === 'chat' && (
+          <Card>
+            <ChatThread studentId={studentId} trainerId={profile.id} meId={profile.id} />
+          </Card>
+        )}
         {tab === 'routine' && <RoutineSection studentId={studentId} trainerId={profile.id} />}
         {tab === 'history' && (
           <Card>
@@ -87,7 +105,7 @@ export function CoachStudentDetail() {
           </Card>
         )}
         {tab === 'diet' && <NutritionSection studentId={studentId} trainerId={profile.id} />}
-        {tab === 'payments' && <PaymentsSection studentId={studentId} />}
+        {tab === 'payments' && <PaymentsSection studentId={studentId} studentName={student?.full_name ?? ''} />}
         {tab === 'auto' && <AutoPlanBuilder studentId={studentId} trainerId={profile.id} />}
       </div>
     </AppShell>
@@ -610,7 +628,7 @@ function NutritionSection({ studentId, trainerId }: { studentId: string; trainer
   );
 }
 
-function PaymentsSection({ studentId }: { studentId: string }) {
+function PaymentsSection({ studentId, studentName }: { studentId: string; studentName: string }) {
   const { t, lang } = useLanguage();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [receiptUrls, setReceiptUrls] = useState<Record<number, string>>({});
@@ -703,6 +721,16 @@ function PaymentsSection({ studentId }: { studentId: string }) {
     load();
   }
 
+  function whatsappReminder(payment: Payment) {
+    const overdue = payment.period_end < new Date().toISOString().slice(0, 10);
+    const text = t(overdue ? 'coachDetail.reminderOverdue' : 'coachDetail.reminderDue', {
+      name: studentName.split(' ')[0] || '',
+      amount: formatMoney(payment.amount, payment.currency, lang),
+      date: formatDate(payment.period_end, lang),
+    });
+    return `https://wa.me/?text=${encodeURIComponent(text)}`;
+  }
+
   async function markPaid(id: number) {
     setError(null);
     const { error: updateErr } = await supabase
@@ -765,13 +793,24 @@ function PaymentsSection({ studentId }: { studentId: string }) {
               </div>
               <div style={{ marginTop: 'var(--oc-space-2)' }}>
                 {payment.status === 'pending' ? (
-                  <button
-                    type="button"
-                    onClick={() => markPaid(payment.id)}
-                    style={{ background: 'none', border: 'none', color: 'var(--oc-energy)', cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: 0 }}
-                  >
-                    {t('coachStudentDetail.markPaid')}
-                  </button>
+                  <div className="oc-item-actions">
+                    <button
+                      type="button"
+                      onClick={() => markPaid(payment.id)}
+                      style={{ background: 'none', border: 'none', color: 'var(--oc-energy)', cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: 0 }}
+                    >
+                      {t('coachStudentDetail.markPaid')}
+                    </button>
+                    <a
+                      className="oc-link oc-link--gold"
+                      style={{ fontSize: 13 }}
+                      href={whatsappReminder(payment)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {t('coachDetail.remindWhatsapp')}
+                    </a>
+                  </div>
                 ) : (
                   <StatusPill status={payment.status} />
                 )}

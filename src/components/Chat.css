@@ -1,0 +1,50 @@
+/* Chat entrenador-alumno y asistente de rutina */
+.oc-chat { display: flex; flex-direction: column; gap: var(--oc-space-3); }
+.oc-chat__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--oc-space-2);
+  max-height: min(60vh, 520px);
+  min-height: 160px;
+  overflow-y: auto;
+  padding: var(--oc-space-3);
+  border-radius: var(--oc-radius-sm);
+  background: var(--oc-ink);
+  border: 1px solid var(--oc-border);
+}
+.oc-chat__empty { margin: auto; color: var(--oc-text-muted); font-size: 13px; text-align: center; }
+.oc-chat__error { margin: 0; color: var(--oc-danger); font-size: 13px; }
+.oc-chat__form { display: flex; gap: var(--oc-space-2); align-items: flex-end; }
+.oc-chat__input { flex: 1; resize: none; min-height: 44px; max-height: 140px; field-sizing: content; }
+
+.oc-msg {
+  align-self: flex-start;
+  max-width: 82%;
+  padding: 8px 12px;
+  border-radius: 14px 14px 14px 4px;
+  background: #22303a;
+  color: var(--oc-text);
+}
+.oc-msg--me {
+  align-self: flex-end;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--oc-gold);
+  color: var(--oc-ink);
+}
+.oc-msg__body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.4; }
+.oc-msg__time { display: block; margin-top: 2px; font-size: 10px; opacity: 0.7; text-align: right; }
+
+/* Pedidos de cambio */
+.oc-req { display: flex; flex-direction: column; gap: var(--oc-space-2); padding: var(--oc-space-3); border-radius: var(--oc-radius-sm); background: var(--oc-surface-gradient); box-shadow: var(--oc-shadow-raised-sm); }
+.oc-req__head { display: flex; justify-content: space-between; gap: var(--oc-space-2); align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--oc-text-muted); }
+.oc-req__text { margin: 0; font-size: 14px; }
+.oc-req__summary { margin: 0; font-size: 13px; color: var(--oc-text-muted); }
+.oc-req__changes { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.oc-req__changes small { color: var(--oc-text-muted); }
+.oc-req__actions { display: flex; gap: var(--oc-space-2); flex-wrap: wrap; align-items: center; }
+.oc-req__reply { margin: 0; padding: var(--oc-space-2) var(--oc-space-3); border-left: 3px solid var(--oc-energy); font-size: 14px; }
+.oc-badge--energy { color: var(--oc-energy); }
+.oc-badge { font-size: 12px; font-weight: 700; border: 1px solid currentColor; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.oc-badge--danger { color: var(--oc-danger); }
+.oc-badge--warning { color: var(--oc-gold); }
+.oc-badge--muted { color: var(--oc-text-muted); }

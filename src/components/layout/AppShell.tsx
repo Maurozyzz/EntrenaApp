@@ -16,6 +16,7 @@ const ICONS: Record<string, string> = {
   'nav.routine': 'M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12',
   'nav.progress': 'M4 19V5M4 19h16M8 15l4-4 3 3 5-6',
   'nav.diet': 'M7 3v8a2 2 0 0 0 2 2v8M11 3v8M7 7h4M17 3c-2 2-2 6 0 8v10',
+  'nav.chat': 'M4 5h16v11H9l-5 4z',
   'nav.payments': 'M3 6h18v12H3zM3 10h18M7 15h4',
   'nav.students': 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 1 0 0-6M22 21a6 6 0 0 0-4-5.6',
   'nav.exercises': 'M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12',
