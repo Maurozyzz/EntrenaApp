@@ -25,8 +25,7 @@
   gap: var(--oc-space-2);
   overflow-x: auto;
   scrollbar-width: none;
-  margin: 0 calc(var(--oc-space-5) * -1);
-  padding: 2px var(--oc-space-5);
+  padding: 2px;
 }
 .oc-workout__days::-webkit-scrollbar { display: none; }
 

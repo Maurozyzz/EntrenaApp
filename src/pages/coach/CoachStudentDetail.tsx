@@ -16,6 +16,18 @@ import { COACH_NAV } from './nav';
 import { DAYS, dayLabel, groupByDay, muscleGroupSummary } from '../../lib/days';
 import { translateExerciseName } from '../../lib/catalogTranslations';
 import { formatDate, formatMoney } from '../../lib/format';
+import { StudentSummary } from '../../components/StudentSummary';
+import '../coach/CoachStudents.css';
+
+type Tab = 'summary' | 'routine' | 'history' | 'diet' | 'payments' | 'auto';
+const TABS: { id: Tab; key: string }[] = [
+  { id: 'summary', key: 'coachDetail.tabSummary' },
+  { id: 'routine', key: 'coachDetail.tabRoutine' },
+  { id: 'history', key: 'coachDetail.tabHistory' },
+  { id: 'diet', key: 'coachDetail.tabDiet' },
+  { id: 'payments', key: 'coachDetail.tabPayments' },
+  { id: 'auto', key: 'coachDetail.tabAuto' },
+];
 import type {
   Exercise,
   NutritionPlan,
@@ -32,6 +44,7 @@ export function CoachStudentDetail() {
   const { profile } = useAuth();
   const { t } = useLanguage();
   const [student, setStudent] = useState<Profile | null>(null);
+  const [tab, setTab] = useState<Tab>('summary');
 
   useEffect(() => {
     if (!studentId) return;
@@ -42,17 +55,40 @@ export function CoachStudentDetail() {
 
   return (
     <AppShell links={COACH_NAV}>
-      <h1 style={{ color: 'var(--oc-gold)' }}>{student?.full_name || student?.email || t('coachStudentDetail.fallbackName')}</h1>
+      <h1 style={{ color: 'var(--oc-gold)', marginBottom: 0 }}>
+        {student?.full_name || student?.email || t('coachStudentDetail.fallbackName')}
+      </h1>
+      {student?.email && student.full_name && (
+        <p style={{ margin: '4px 0 0', color: 'var(--oc-text-muted)', fontSize: 13 }}>{student.email}</p>
+      )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-5)', marginTop: 'var(--oc-space-4)' }}>
-        <AutoPlanBuilder studentId={studentId} trainerId={profile.id} />
-        <RoutineSection studentId={studentId} trainerId={profile.id} />
-        <Card>
-          <h2 style={{ marginTop: 0 }}>{t('coachStudentDetail.workoutHistoryTitle')}</h2>
-          <WorkoutHistory studentId={studentId} />
-        </Card>
-        <NutritionSection studentId={studentId} trainerId={profile.id} />
-        <PaymentsSection studentId={studentId} />
+      <div className="oc-tabs" role="tablist" aria-label={t('coachDetail.sections')}>
+        {TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.id}
+            className={`oc-tab${tab === item.id ? ' oc-tab--on' : ''}`}
+            onClick={() => setTab(item.id)}
+          >
+            {t(item.key)}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--oc-space-5)' }}>
+        {tab === 'summary' && <StudentSummary studentId={studentId} onGoTo={(next) => setTab(next as Tab)} />}
+        {tab === 'routine' && <RoutineSection studentId={studentId} trainerId={profile.id} />}
+        {tab === 'history' && (
+          <Card>
+            <h2 style={{ marginTop: 0 }}>{t('coachStudentDetail.workoutHistoryTitle')}</h2>
+            <WorkoutHistory studentId={studentId} />
+          </Card>
+        )}
+        {tab === 'diet' && <NutritionSection studentId={studentId} trainerId={profile.id} />}
+        {tab === 'payments' && <PaymentsSection studentId={studentId} />}
+        {tab === 'auto' && <AutoPlanBuilder studentId={studentId} trainerId={profile.id} />}
       </div>
     </AppShell>
   );
@@ -70,6 +106,12 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
   const [reps, setReps] = useState('');
   const [weightTarget, setWeightTarget] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [edit, setEdit] = useState({ sets: '', reps: '', weight: '', rest: '', notes: '' });
+  const [busy, setBusy] = useState(false);
+  const [sources, setSources] = useState<{ id: string; name: string }[]>([]);
+  const [copyFrom, setCopyFrom] = useState('');
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -95,8 +137,146 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
 
   useEffect(() => {
     load();
+    // Otros alumnos con rutina activa, para "copiar rutina de…".
+    (async () => {
+      const { data: rs } = await supabase
+        .from('routines')
+        .select('student_id')
+        .eq('trainer_id', trainerId)
+        .eq('active', true)
+        .neq('student_id', studentId);
+      const ids = [...new Set((rs ?? []).map((r) => r.student_id as string))];
+      if (ids.length === 0) return setSources([]);
+      const { data: ps } = await supabase.from('profiles').select('id, full_name, email').in('id', ids);
+      setSources(
+        (ps ?? [])
+          .map((p) => ({ id: p.id as string, name: (p.full_name || p.email || p.id) as string }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId]);
+
+  function startEdit(item: RoutineExerciseWithName) {
+    setEditingId(item.id);
+    setEdit({
+      sets: item.sets?.toString() ?? '',
+      reps: item.reps ?? '',
+      weight: item.weight_target?.toString() ?? '',
+      rest: item.rest_seconds?.toString() ?? '',
+      notes: item.notes ?? '',
+    });
+  }
+
+  async function saveEdit(id: number) {
+    setBusy(true);
+    setError(null);
+    const { error: updateErr } = await supabase
+      .from('routine_exercises')
+      .update({
+        sets: edit.sets ? Number(edit.sets) : null,
+        reps: edit.reps || null,
+        weight_target: edit.weight ? Number(edit.weight.replace(',', '.')) : null,
+        rest_seconds: edit.rest ? Number(edit.rest) : null,
+        notes: edit.notes.trim() || null,
+      })
+      .eq('id', id);
+    setBusy(false);
+    if (updateErr) {
+      setError(t('common.saveFailed', { message: updateErr.message }));
+      return;
+    }
+    setEditingId(null);
+    load();
+  }
+
+  // Sube o baja un ejercicio dentro de su día y renumera order_index para que
+  // quede un orden limpio (antes podía haber índices repetidos).
+  async function move(item: RoutineExerciseWithName, direction: -1 | 1) {
+    const sameDay = items.filter((i) => i.day_of_week === item.day_of_week);
+    const pos = sameDay.findIndex((i) => i.id === item.id);
+    const target = sameDay[pos + direction];
+    if (!target) return;
+    const ordered = [...items];
+    const a = ordered.findIndex((i) => i.id === item.id);
+    const b = ordered.findIndex((i) => i.id === target.id);
+    [ordered[a], ordered[b]] = [ordered[b], ordered[a]];
+    const changes = ordered
+      .map((row, index) => ({ row, index }))
+      .filter(({ row, index }) => row.order_index !== index);
+    setBusy(true);
+    setError(null);
+    setItems(ordered.map((row, index) => ({ ...row, order_index: index })));
+    const results = await Promise.all(
+      changes.map(({ row, index }) => supabase.from('routine_exercises').update({ order_index: index }).eq('id', row.id)),
+    );
+    setBusy(false);
+    const failed = results.find((r) => r.error);
+    if (failed?.error) {
+      setError(t('common.saveFailed', { message: failed.error.message }));
+      load();
+    }
+  }
+
+  async function copyRoutine() {
+    if (!copyFrom) return;
+    setBusy(true);
+    setError(null);
+    setCopyMsg(null);
+    const { data: source } = await supabase
+      .from('routines')
+      .select('id')
+      .eq('student_id', copyFrom)
+      .eq('active', true)
+      .limit(1)
+      .maybeSingle();
+    const { data: sourceItems, error: srcErr } = source
+      ? await supabase.from('routine_exercises').select('*').eq('routine_id', source.id).order('order_index')
+      : { data: [], error: null };
+    if (srcErr || !sourceItems || sourceItems.length === 0) {
+      setBusy(false);
+      setError(srcErr ? t('common.saveFailed', { message: srcErr.message }) : t('coachDetail.copyEmpty'));
+      return;
+    }
+
+    let routineId = routine?.id;
+    if (!routineId) {
+      const { data: created, error: createErr } = await supabase
+        .from('routines')
+        .insert({ student_id: studentId, trainer_id: trainerId, name: 'Rutina activa' })
+        .select('id')
+        .single();
+      if (createErr || !created) {
+        setBusy(false);
+        setError(t('common.saveFailed', { message: createErr?.message ?? '' }));
+        return;
+      }
+      routineId = created.id;
+    }
+
+    const start = items.length;
+    const { error: insertErr } = await supabase.from('routine_exercises').insert(
+      sourceItems.map((row, i) => ({
+        routine_id: routineId,
+        exercise_id: row.exercise_id,
+        day_of_week: row.day_of_week,
+        order_index: start + i,
+        sets: row.sets,
+        reps: row.reps,
+        weight_target: row.weight_target,
+        rest_seconds: row.rest_seconds,
+        notes: row.notes,
+      })),
+    );
+    setBusy(false);
+    if (insertErr) {
+      setError(t('common.saveFailed', { message: insertErr.message }));
+      return;
+    }
+    setCopyMsg(t('coachDetail.copied', { n: sourceItems.length }));
+    setCopyFrom('');
+    load();
+  }
 
   async function createRoutine() {
     setError(null);
@@ -187,21 +367,62 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
                           flexWrap: 'wrap',
                         }}
                       >
-                        <span>
+                        <span style={{ minWidth: 0 }}>
                           <strong>{item.exercises?.name ? translateExerciseName(item.exercises.name, lang) : ''}</strong>
                           <span style={{ color: 'var(--oc-text-muted)', fontSize: 13 }}>
                             {' '}
                             {t('coachStudentDetail.setsRepsLine', { sets: item.sets ?? '—', reps: item.reps ?? '—' })}
                             {item.weight_target ? ` ${t('coachStudentDetail.weightSuffix', { weight: item.weight_target })}` : ''}
+                            {item.rest_seconds ? ` · ${item.rest_seconds}s` : ''}
                           </span>
+                          {item.notes && <span style={{ display: 'block', color: 'var(--oc-gold)', fontSize: 12 }}>{item.notes}</span>}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => removeExercise(item.id)}
-                          style={{ background: 'none', border: 'none', color: 'var(--oc-danger)', cursor: 'pointer', fontSize: 13 }}
-                        >
-                          {t('coachStudentDetail.remove')}
-                        </button>
+                        <span className="oc-item-actions">
+                          <button type="button" className="oc-icon-btn" aria-label={t('coachDetail.moveUp')} disabled={busy || dayItems[0]?.id === item.id} onClick={() => move(item, -1)}>↑</button>
+                          <button type="button" className="oc-icon-btn" aria-label={t('coachDetail.moveDown')} disabled={busy || dayItems[dayItems.length - 1]?.id === item.id} onClick={() => move(item, 1)}>↓</button>
+                          <button type="button" className="oc-link oc-link--gold" onClick={() => (editingId === item.id ? setEditingId(null) : startEdit(item))}>
+                            {editingId === item.id ? t('common.cancel') : t('coachDetail.edit')}
+                          </button>
+                          <button type="button" className="oc-link oc-link--danger" onClick={() => removeExercise(item.id)}>
+                            {t('coachStudentDetail.remove')}
+                          </button>
+                        </span>
+                        {editingId === item.id && (
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              saveEdit(item.id);
+                            }}
+                            style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', alignItems: 'flex-end', width: '100%' }}
+                          >
+                            <div style={{ width: 70 }}>
+                              <Field label={t('coachStudentDetail.sets')}>
+                                <Input value={edit.sets} onChange={(e) => setEdit({ ...edit, sets: e.target.value })} inputMode="numeric" />
+                              </Field>
+                            </div>
+                            <div style={{ width: 80 }}>
+                              <Field label={t('coachStudentDetail.reps')}>
+                                <Input value={edit.reps} onChange={(e) => setEdit({ ...edit, reps: e.target.value })} />
+                              </Field>
+                            </div>
+                            <div style={{ width: 80 }}>
+                              <Field label={t('coachStudentDetail.weightKg')}>
+                                <Input value={edit.weight} onChange={(e) => setEdit({ ...edit, weight: e.target.value })} inputMode="decimal" />
+                              </Field>
+                            </div>
+                            <div style={{ width: 90 }}>
+                              <Field label={t('coachDetail.restSec')}>
+                                <Input value={edit.rest} onChange={(e) => setEdit({ ...edit, rest: e.target.value })} inputMode="numeric" />
+                              </Field>
+                            </div>
+                            <div style={{ flex: '1 1 160px' }}>
+                              <Field label={t('coachDetail.note')}>
+                                <Input value={edit.notes} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} placeholder={t('coachDetail.notePlaceholder')} />
+                              </Field>
+                            </div>
+                            <Button type="submit" disabled={busy}>{busy ? t('common.saving') : t('routine.save')}</Button>
+                          </form>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -253,6 +474,28 @@ function RoutineSection({ studentId, trainerId }: { studentId: string; trainerId
             <Button type="submit">{t('common.add')}</Button>
           </form>
         </>
+      )}
+
+      {!loading && sources.length > 0 && (
+        <div style={{ marginTop: 'var(--oc-space-5)', borderTop: '1px solid var(--oc-border)', paddingTop: 'var(--oc-space-4)' }}>
+          <p style={{ margin: '0 0 var(--oc-space-2)', fontSize: 13, color: 'var(--oc-text-muted)' }}>{t('coachDetail.copyHint')}</p>
+          <div style={{ display: 'flex', gap: 'var(--oc-space-2)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <Field label={t('coachDetail.copyFrom')}>
+                <Select value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
+                  <option value="">{t('coachStudentDetail.choose')}</option>
+                  {sources.map((src) => (
+                    <option key={src.id} value={src.id}>{src.name}</option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <Button variant="secondary" disabled={!copyFrom || busy} onClick={copyRoutine}>
+              {t('coachDetail.copyButton')}
+            </Button>
+          </div>
+          {copyMsg && <p style={{ color: 'var(--oc-energy)', fontSize: 13 }}>{copyMsg}</p>}
+        </div>
       )}
     </Card>
   );
@@ -430,6 +673,36 @@ function PaymentsSection({ studentId }: { studentId: string }) {
     load();
   }
 
+  // Cuota siguiente: misma plata y mismo largo de período, corrido un mes.
+  async function createNextFee() {
+    const last = payments[0];
+    if (!last) return;
+    const shift = (value: string) => {
+      const d = new Date(`${value}T00:00:00`);
+      const day = d.getDate();
+      d.setDate(1);
+      d.setMonth(d.getMonth() + 1);
+      const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      d.setDate(Math.min(day, lastDay));
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    setSaving(true);
+    setError(null);
+    const { error: insertErr } = await supabase.from('payments').insert({
+      student_id: studentId,
+      amount: last.amount,
+      currency: last.currency,
+      period_start: shift(last.period_start),
+      period_end: shift(last.period_end),
+    });
+    setSaving(false);
+    if (insertErr) {
+      setError(t('common.saveFailed', { message: insertErr.message }));
+      return;
+    }
+    load();
+  }
+
   async function markPaid(id: number) {
     setError(null);
     const { error: updateErr } = await supabase
@@ -445,7 +718,19 @@ function PaymentsSection({ studentId }: { studentId: string }) {
 
   return (
     <Card>
-      <h2 style={{ marginTop: 0 }}>{t('coachStudentDetail.paymentsTitle')}</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--oc-space-3)', flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0 }}>{t('coachStudentDetail.paymentsTitle')}</h2>
+        {payments.length > 0 && (
+          <Button variant="secondary" onClick={createNextFee} disabled={saving}>
+            {t('coachDetail.nextFee', {
+              amount: formatMoney(payments[0].amount, payments[0].currency, lang),
+            })}
+          </Button>
+        )}
+      </div>
+      <p style={{ color: 'var(--oc-text-muted)', fontSize: 12, margin: 'var(--oc-space-2) 0 var(--oc-space-4)' }}>
+        {t('coachDetail.nextFeeHint')}
+      </p>
       {error && <p style={{ color: 'var(--oc-danger)', fontSize: 13 }}>{error}</p>}
 
       {loading ? (
